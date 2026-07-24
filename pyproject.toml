@@ -1,0 +1,15 @@
+[project]
+name = "agentevalgate"
+version = "0.1.0"
+description = "Merge-blocking CI evaluation gate for RAG applications"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.139.2",
+    "uvicorn==0.51.0",
+    "pydantic-settings==2.14.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+]
