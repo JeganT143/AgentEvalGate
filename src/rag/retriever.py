@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 
 import numpy as np
@@ -47,23 +46,6 @@ class InMemoryRetriever:
         ]
 
 
-def _hashing_embed(text: str, dim: int = 256) -> np.ndarray:
-    """Deterministic, offline placeholder embedder (hashed bag-of-words) for the Day 1 demo only.
-
-    No semantic understanding - just word overlap. Uses SHA-256 rather than Python's
-    built-in hash() because str hashing is randomized per-process by default, which
-    would make this "deterministic" demo produce different vectors on every run.
-    Replace with a real embeddings client (Settings.embedding_model_name) later;
-    InMemoryRetriever itself doesn't know or care how its vectors were produced.
-    """
-    vector = np.zeros(dim, dtype=np.float64)
-    for token in text.lower().split():
-        digest = hashlib.sha256(token.encode("utf-8")).digest()
-        index = int.from_bytes(digest[:8], "big") % dim
-        vector[index] += 1.0
-    return vector
-
-
 def build_demo_corpus() -> list[Document]:
     texts = [
         "Python is a high-level programming language known for readability and simplicity.",
@@ -79,12 +61,14 @@ def build_demo_corpus() -> list[Document]:
 
 
 if __name__ == "__main__":
+    from src.rag.demo_providers import hashing_embed
+
     corpus = build_demo_corpus()
-    embeddings = np.stack([_hashing_embed(doc.text) for doc in corpus])
+    embeddings = np.stack([hashing_embed(doc.text) for doc in corpus])
     retriever = InMemoryRetriever(documents=corpus, embeddings=embeddings)
 
     query = "What Python framework is used to build web APIs?"
-    results = retriever.retrieve(_hashing_embed(query), top_k=3)
+    results = retriever.retrieve(hashing_embed(query), top_k=3)
 
     print(f"Query: {query}\n")
     for rank, result in enumerate(results, start=1):
