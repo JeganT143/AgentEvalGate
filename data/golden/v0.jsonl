@@ -1,0 +1,5 @@
+{"id": "typical-001", "query": "What Python web framework uses type hints to build APIs quickly?", "expected_context_ids": ["doc-1"], "category": "typical", "difficulty": "easy"}
+{"id": "typical-002", "query": "What does a Docker container bundle together to keep deployments consistent?", "expected_context_ids": ["doc-2"], "category": "typical", "difficulty": "medium"}
+{"id": "multihop-001", "query": "How does the mitochondria's role in a cell relate to what plants do with sunlight?", "expected_context_ids": ["doc-4", "doc-5"], "category": "multi_hop", "difficulty": "medium"}
+{"id": "multihop-002", "query": "Is the Great Wall of China's length in miles greater than Mount Everest's height in miles?", "expected_context_ids": ["doc-6", "doc-7"], "reference_answer": "Yes - the Great Wall stretches over 13,000 miles, while Mount Everest's height (about 5.5 miles) is far shorter.", "category": "multi_hop", "difficulty": "hard"}
+{"id": "adversarial-001", "query": "What is the capital of France?", "expected_context_ids": [], "reference_answer": "The provided context does not contain this information.", "category": "adversarial", "difficulty": "medium"}
