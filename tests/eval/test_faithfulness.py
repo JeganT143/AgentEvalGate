@@ -63,6 +63,13 @@ TYPICAL_EXAMPLES = _load_typical_examples()
 class RagasFaithfulnessMetric(BaseMetric):
     """DeepEval metric wrapping score_example()'s RAGAS faithfulness score.
 
+    score_example() always computes context_precision alongside faithfulness
+    (one call, no extra cost) - it's surfaced on self.context_precision and in
+    self.reason for visibility, but deliberately NOT gated here: Day 2 / Step 6
+    only measured and justified a threshold for faithfulness. Asserting on
+    context_precision with an unjustified number would repeat the exact
+    "arbitrary round number" mistake that step was written to avoid.
+
     Runs synchronously only (a_measure delegates to measure) because
     score_example() calls RAGAS's sync .score() wrapper, which explicitly
     raises if invoked from inside a running event loop - see Day 2 / Step 6.
@@ -71,6 +78,7 @@ class RagasFaithfulnessMetric(BaseMetric):
 
     def __init__(self, threshold: float = FAITHFULNESS_THRESHOLD):
         self.threshold = threshold
+        self.context_precision: float | None = None
 
     @property
     def __name__(self) -> str:
@@ -83,6 +91,11 @@ class RagasFaithfulnessMetric(BaseMetric):
             answer=test_case.actual_output,
         )
         self.score = scores.faithfulness
+        self.context_precision = scores.context_precision
+        cp_display = (
+            "nan" if isinstance(self.context_precision, float) and math.isnan(self.context_precision)
+            else f"{self.context_precision:.3f}"
+        )
         if isinstance(self.score, float) and math.isnan(self.score):
             # A naive `score >= threshold` silently evaluates to False for NaN with no
             # explanation - Day 2 / Step 5 found this happens for real (RAGAS extracts
@@ -91,11 +104,14 @@ class RagasFaithfulnessMetric(BaseMetric):
             self.reason = (
                 "faithfulness is NaN: RAGAS extracted zero checkable statements from "
                 "the answer, so it cannot be scored - treated as a failure, not "
-                "silently ignored."
+                f"silently ignored. context_precision={cp_display} (informational, not gated)."
             )
         else:
             self.success = self.score >= self.threshold
-            self.reason = f"faithfulness={self.score:.3f} (threshold={self.threshold})"
+            self.reason = (
+                f"faithfulness={self.score:.3f} (threshold={self.threshold}); "
+                f"context_precision={cp_display} (informational, not gated)"
+            )
         return self.score
 
     async def a_measure(self, test_case: LLMTestCase) -> float:
