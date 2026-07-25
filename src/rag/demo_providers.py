@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import re
 
 import numpy as np
+
+_WORD_RE = re.compile(r"[a-z0-9]+")
 
 
 def hashing_embed(text: str, dim: int = 256) -> np.ndarray:
@@ -14,9 +17,15 @@ def hashing_embed(text: str, dim: int = 256) -> np.ndarray:
     run. Stand-in until a real embeddings client (Settings.embedding_model_name)
     exists; InMemoryRetriever and RAGPipeline only depend on the Embedder seam, not
     this implementation.
+
+    Tokenizes with a regex (not str.split()) specifically to strip punctuation - a
+    query ending in "?" would otherwise hash its last word (e.g. "fastapi?") to a
+    completely different bucket than the same word in corpus text ("fastapi"), which
+    silently broke retrieval for almost every question-shaped query. See
+    internal/mentoring_notes.md, Day 2 / Step 6.
     """
     vector = np.zeros(dim, dtype=np.float64)
-    for token in text.lower().split():
+    for token in _WORD_RE.findall(text.lower()):
         digest = hashlib.sha256(token.encode("utf-8")).digest()
         index = int.from_bytes(digest[:8], "big") % dim
         vector[index] += 1.0
