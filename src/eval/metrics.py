@@ -8,6 +8,13 @@ from ragas.metrics.collections import ContextPrecisionWithoutReference, Faithful
 
 from src.config import get_settings
 
+# Determinism controls, not environment-specific config: these must be identical in every
+# environment (local/CI/prod), which is the opposite of what belongs in Settings - see
+# internal/mentoring_notes.md (Day 2 / Step 5) for why these are pinned constants here
+# rather than env-configurable values.
+_JUDGE_TEMPERATURE = 0
+_JUDGE_SEED = 42
+
 
 @dataclass(frozen=True)
 class ExampleScores:
@@ -24,7 +31,12 @@ def score_example(query: str, retrieved_context: list[str], answer: str) -> Exam
     matching this project's reference-free primary-metrics strategy.
     """
     settings = get_settings()
-    judge_llm = llm_factory(settings.model_name, client=AsyncOpenAI(api_key=settings.api_key.get_secret_value()))
+    judge_llm = llm_factory(
+        settings.judge_model,
+        client=AsyncOpenAI(api_key=settings.api_key.get_secret_value()),
+        temperature=_JUDGE_TEMPERATURE,
+        seed=_JUDGE_SEED,
+    )
 
     faithfulness = Faithfulness(llm=judge_llm).score(
         user_input=query, response=answer, retrieved_contexts=retrieved_context
