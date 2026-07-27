@@ -32,10 +32,10 @@ env/
 .idea/
 .DS_Store
 
-# Streamlit local config/secrets override (e.g. a project-local secrets.toml with
-# a real API key) - never commit one; pass AEG_API_KEY via .env or the deploy
-# platform's own secrets manager instead.
-.streamlit/
+# Streamlit local secrets override (a project-local secrets.toml can hold a real
+# API key) - never commit one; pass AEG_API_KEY via .env or the deploy platform's
+# own secrets manager instead. config.toml (theme only, no secrets) IS committed.
+.streamlit/secrets.toml
 
 # Private/local-only notes (not part of the public repo) - build_log.md and
 # mentoring_notes.md both live here now (Day 9 / Step 1: previously split across

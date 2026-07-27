@@ -1,0 +1,14 @@
+# Theme only - no secrets belong in this file (see .gitignore for
+# .streamlit/secrets.toml, which is never committed). Base tokens for the
+# fuller custom CSS in dashboard/theme.py; kept minimal since Streamlit's own
+# theme API doesn't reach every element (tabs, tables, cards).
+[theme]
+base = "light"
+primaryColor = "#3B5BDB"
+backgroundColor = "#FAFAFA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#16181D"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

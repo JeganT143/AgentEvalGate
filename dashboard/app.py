@@ -6,6 +6,9 @@ red/green demo. Only "Try It Live" needs AEG_API_KEY / makes real network
 calls - the other three stay read-only and free, matching the original
 single-tab dashboard's zero-config contract (Day 4).
 
+Visual identity lives in dashboard/theme.py (Day 10 / Step 1) - kept separate
+so this file stays about what to render, not how it looks.
+
 Reads exclusively through results_store's functions (Day 4 / Step 1's seam) -
 never touches results/*.json directly, so swapping the storage backend later
 never requires touching this file. See internal/mentoring_notes.md
@@ -30,6 +33,7 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.live_demo import run_example
+from dashboard.theme import apply_theme, render_table, section_label
 from src.config import get_settings
 from src.eval.golden_dataset import load_golden_examples
 from src.eval.results_store import (
@@ -38,7 +42,8 @@ from src.eval.results_store import (
     load_reranker_benchmark_summary,
 )
 
-st.set_page_config(page_title="AgentEvalGate", page_icon="\U0001f4ca", layout="wide")
+st.set_page_config(page_title="AgentEvalGate", page_icon="\U0001f9ea", layout="wide")
+apply_theme()
 
 # Reading order for the "Try It Live" dropdown - not alphabetical (which would
 # read adversarial, multi_hop, typical), but the same typical -> multi_hop ->
@@ -52,19 +57,30 @@ def _fmt_score(value: float) -> str:
     return "NaN" if isinstance(value, float) and math.isnan(value) else f"{value:.3f}"
 
 
+def _pill(label: str, good: bool) -> str:
+    css_class = "aeg-pill-good" if good else "aeg-pill-bad"
+    return f'<span class="aeg-pill {css_class}">{label}</span>'
+
+
 def render_header() -> None:
+    st.markdown('<div class="aeg-eyebrow">AgentEvalGate</div>', unsafe_allow_html=True)
     st.title("Block merges when your RAG faithfulness drops below threshold")
     st.markdown(
-        "[![Eval Gate](https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml/badge.svg)]"
-        "(https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml) &nbsp; "
-        "[GitHub repo](https://github.com/JeganT143/AgentEvalGate)"
+        '<div class="aeg-lede">A merge-blocking CI evaluation gate for RAG applications — '
+        "the same way a unit-test suite blocks a merge on a broken function, except this "
+        "grades answer quality, not whether the code compiles.</div>",
+        unsafe_allow_html=True,
     )
-    st.caption(
-        "AgentEvalGate, end to end, in one page: a live pipeline call, the eval "
-        "gate's CI history, the reranker's measured impact, and the CI gate "
-        "catching a real regression."
+    st.markdown(
+        '<div class="aeg-links">'
+        '<a href="https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml">'
+        '<img src="https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml/badge.svg" '
+        'alt="Eval Gate status"></a>'
+        '&nbsp;&nbsp;<a href="https://github.com/JeganT143/AgentEvalGate">View on GitHub →</a>'
+        "</div>",
+        unsafe_allow_html=True,
     )
-    st.markdown("**The pipeline: Retrieve → Rerank (optional) → Generate → Judge → Gate**")
+    st.markdown("<hr>", unsafe_allow_html=True)
 
 
 def render_try_it_live_tab() -> None:
@@ -92,16 +108,16 @@ def render_try_it_live_tab() -> None:
                 st.error(f"Live pipeline call failed: {exc}")
                 return
 
-        st.subheader("Retrieved chunks")
-        st.dataframe(
-            pd.DataFrame(result["retrieved"])[["id", "score", "expected", "text"]],
-            use_container_width=True,
-            hide_index=True,
+        section_label("Retrieved chunks")
+        render_table(
+            result["retrieved"],
+            columns=[("id", "Doc"), ("score", "Score"), ("expected", "Expected"), ("text", "Text")],
+            card=True,
         )
         st.metric("precision@3", f"{result['precision_at_k']:.3f}")
 
-        st.subheader("Generated answer")
-        st.write(result["answer"])
+        section_label("Generated answer")
+        st.markdown(f'<div class="aeg-card">{result["answer"]}</div>', unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Faithfulness", _fmt_score(result["faithfulness"]))
@@ -112,7 +128,7 @@ def render_try_it_live_tab() -> None:
 def render_eval_gate_results_tab() -> None:
     # Independent of run history - a fresh deploy with zero CI runs yet still shows
     # the judge's own measured reliability baseline.
-    st.subheader("Judge Variance Baseline")
+    section_label("Judge Variance Baseline")
     variance = load_judge_variance_summary()
     if variance is None:
         st.caption("Not measured yet.")
@@ -158,26 +174,41 @@ def render_eval_gate_results_tab() -> None:
     col1, col2, col3 = st.columns(3)
     col1.metric("Total runs", len(df))
     col2.metric("Latest faithfulness", f"{df['faithfulness'].iloc[-1]:.3f}")
-    col3.metric("Latest run", "✅ passed" if df["passed"].iloc[-1] else "❌ failed")
+    with col3:
+        st.markdown(
+            '<div style="font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; '
+            'text-transform: uppercase; color: var(--ink-muted);">Latest run</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(_pill("PASSED", True) if df["passed"].iloc[-1] else _pill("FAILED", False), unsafe_allow_html=True)
 
-    st.subheader("Faithfulness & Context Precision Over Time")
+    section_label("Faithfulness & Context Precision Over Time")
     st.line_chart(df.set_index("timestamp")[["faithfulness", "context_precision"]])
 
-    st.subheader("Cost per Run")
+    section_label("Cost per Run")
     st.bar_chart(df.set_index("run_id")[["cost_usd"]])
 
-    st.subheader("Currently Failing Examples")
+    section_label("Currently Failing Examples")
     latest_run = results[-1]
     if latest_run.failing_examples:
-        st.dataframe(pd.DataFrame(latest_run.failing_examples), use_container_width=True, hide_index=True)
+        render_table(
+            latest_run.failing_examples,
+            columns=[(k, k.replace("_", " ").title()) for k in latest_run.failing_examples[0]],
+            card=True,
+        )
     else:
         st.success("No failing examples in the latest run.")
 
-    st.subheader("Run History")
-    st.dataframe(
-        df[["run_id", "timestamp", "faithfulness", "context_precision", "cost_usd", "passed"]],
-        use_container_width=True,
-        hide_index=True,
+    section_label("Run History")
+    render_table(
+        df[["run_id", "timestamp", "faithfulness", "context_precision", "cost_usd", "passed"]].assign(
+            timestamp=lambda d: d["timestamp"].astype(str)
+        ).to_dict("records"),
+        columns=[
+            ("run_id", "Run"), ("timestamp", "Timestamp"), ("faithfulness", "Faithfulness"),
+            ("context_precision", "Context Precision"), ("cost_usd", "Cost (USD)"), ("passed", "Passed"),
+        ],
+        card=True,
     )
 
 
@@ -187,10 +218,11 @@ def render_reranker_impact_tab() -> None:
         st.caption("Not measured yet.")
         return
 
-    st.dataframe(
-        pd.DataFrame(summary["precision_at_k"]["by_category"]),
-        use_container_width=True,
-        hide_index=True,
+    section_label("Precision@3 by category")
+    render_table(
+        summary["precision_at_k"]["by_category"],
+        columns=[("category", "Category"), ("n", "N"), ("off", "Off"), ("on", "On"), ("delta", "Delta")],
+        card=True,
     )
     st.metric("All categories: precision@3 delta", f"+{summary['precision_at_k']['all']['delta']:.4f}")
 
@@ -215,7 +247,7 @@ def render_ci_demo_tab() -> None:
 render_header()
 
 tab_live, tab_results, tab_reranker, tab_ci = st.tabs(
-    ["🔍 Try It Live", "📊 Eval Gate Results", "🔀 Reranker Impact", "🎬 CI Demo"]
+    ["Try It Live", "Eval Gate Results", "Reranker Impact", "CI Demo"]
 )
 
 with tab_live:
