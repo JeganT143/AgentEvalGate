@@ -55,3 +55,17 @@ def test_cached_embedder_persists_across_instances(tmp_path):
     assert inner.call_count == 1  # second instance loaded the cache file, didn't recompute
     assert second_instance.hits == 1
     assert second_instance.misses == 0
+
+
+def test_cached_embedder_logs_hit_and_miss(tmp_path, caplog):
+    inner = CountingEmbedder()
+    cache_path = tmp_path / "embeddings.json"
+    cached = CachedEmbedder(inner, model_name="text-embedding-3-small", cache_path=cache_path)
+
+    with caplog.at_level("INFO", logger="src.eval.cache"):
+        cached.embed("logged text")  # miss
+        cached.embed("logged text")  # hit
+
+    messages = [r.message for r in caplog.records]
+    assert any("CACHE MISS" in m and "logged text" in m for m in messages)
+    assert any("CACHE HIT" in m and "logged text" in m for m in messages)

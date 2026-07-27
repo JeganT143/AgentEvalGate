@@ -8,6 +8,7 @@ from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
 from src.config import get_settings
+from src.eval.cache import CachedEmbedder
 from src.eval.metrics import score_example
 from src.rag.demo_providers import HashingEmbedder
 from src.rag.generators import OpenAIGenerator
@@ -124,7 +125,11 @@ class RagasFaithfulnessMetric(BaseMetric):
 @pytest.fixture(scope="module")
 def pipeline() -> RAGPipeline:
     settings = get_settings()
-    embedder = HashingEmbedder()
+    # CachedEmbedder wraps today's free placeholder mainly to exercise/demonstrate the
+    # cache mechanism (Day 3 / Step 3-4) - the real payoff lands once a real embeddings
+    # client replaces HashingEmbedder, at which point this line is the only thing that
+    # needs to change.
+    embedder = CachedEmbedder(HashingEmbedder(), model_name=settings.embedding_model_name)
     corpus = build_demo_corpus()
     embeddings = np.stack([embedder.embed(doc.text) for doc in corpus])
     retriever = InMemoryRetriever(documents=corpus, embeddings=embeddings)

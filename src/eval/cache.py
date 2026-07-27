@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,12 @@ import numpy as np
 from src.rag.pipeline import Embedder
 
 DEFAULT_CACHE_PATH = Path(".cache/embeddings.json")
+
+logger = logging.getLogger(__name__)
+
+
+def _preview(text: str, length: int = 40) -> str:
+    return text if len(text) <= length else text[:length] + "..."
 
 
 class CachedEmbedder:
@@ -56,9 +63,11 @@ class CachedEmbedder:
         cached = self._cache.get(key)
         if cached is not None:
             self.hits += 1
+            logger.info("CACHE HIT  (%s): %r", key[:8], _preview(text))
             return np.array(cached)
 
         self.misses += 1
+        logger.info("CACHE MISS (%s): %r - re-embedding", key[:8], _preview(text))
         vector = self._embedder.embed(text)
         self._cache[key] = vector.tolist()
         self._save()
