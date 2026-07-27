@@ -8,6 +8,7 @@ __pycache__/
 .coverage
 htmlcov/
 .deepeval/
+.cache/
 
 # Distribution / packaging
 build/
