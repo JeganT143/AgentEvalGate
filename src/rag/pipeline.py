@@ -5,6 +5,7 @@ from typing import Protocol
 
 import numpy as np
 
+from src.rag.reranker import Reranker
 from src.rag.retriever import InMemoryRetriever, RetrievalResult
 
 
@@ -38,15 +39,27 @@ class RAGPipeline:
         retriever: InMemoryRetriever,
         generator: Generator,
         top_k: int = 3,
+        reranker: Reranker | None = None,
+        rerank_pool_size: int | None = None,
     ) -> None:
         self._embedder = embedder
         self._retriever = retriever
         self._generator = generator
         self._top_k = top_k
+        self._reranker = reranker
+        # Oversample beyond top_k when reranking, so there's room to actually change
+        # which documents land in the final top_k - not just their order within an
+        # unchanged set, which precision@k can't register at all (see
+        # internal/mentoring_notes.md, Day 5 / Step 2's measured finding). Defaults to
+        # the same +2 oversample already measured in that step.
+        self._rerank_pool_size = rerank_pool_size if rerank_pool_size is not None else top_k + 2
 
     def answer(self, query: str) -> PipelineResult:
         query_embedding = self._embedder.embed(query)
-        retrieved = self._retriever.retrieve(query_embedding, top_k=self._top_k)
+        retrieve_k = self._rerank_pool_size if self._reranker is not None else self._top_k
+        retrieved = self._retriever.retrieve(query_embedding, top_k=retrieve_k)
+        if self._reranker is not None:
+            retrieved = self._reranker.rerank(query, retrieved, top_k=self._top_k)
         prompt = self._build_prompt(query, retrieved)
         generated_answer = self._generator.generate(prompt)
         return PipelineResult(answer=generated_answer, retrieved_context=retrieved)
