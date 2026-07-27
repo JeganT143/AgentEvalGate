@@ -1,0 +1,24 @@
+name: Eval Gate
+
+on:
+  pull_request:
+
+jobs:
+  eval-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval
+
+      - name: Run eval gate
+        env:
+          AEG_API_KEY: ${{ secrets.AEG_API_KEY }}
+        run: .venv/bin/python -m pytest tests/eval/
