@@ -9,6 +9,7 @@ __pycache__/
 htmlcov/
 .deepeval/
 .cache/
+variance_results.json
 
 # Distribution / packaging
 build/

@@ -1,0 +1,39 @@
+name: Judge Variance Measurement
+
+# Manual only (workflow_dispatch), not on every PR - this is a diagnostic
+# re-measurement (Day 2 / Step 5's methodology, Day 3 / Step 5), not part of
+# the merge-blocking gate itself. Makes ~800 real, paid judge calls across all
+# 50 golden examples x 3 repeats - triggered deliberately, not automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: "Number of judge repeats per example"
+        required: false
+        default: "3"
+
+jobs:
+  measure-variance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval
+
+      - name: Measure judge variance
+        env:
+          AEG_API_KEY: ${{ secrets.AEG_API_KEY }}
+        run: .venv/bin/python -m src.eval.measure_variance --repeats "${{ inputs.repeats }}"
+
+      - name: Upload full results
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: variance-results
+          path: variance_results.json
