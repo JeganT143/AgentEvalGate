@@ -2,6 +2,8 @@ name: Eval Gate
 
 on:
   pull_request:
+  push:
+    branches: [master]
 
 jobs:
   eval-gate:
