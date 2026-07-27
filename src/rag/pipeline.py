@@ -68,8 +68,9 @@ class RAGPipeline:
     def _build_prompt(query: str, retrieved: list[RetrievalResult]) -> str:
         context = "\n\n".join(f"- {result.document.text}" for result in retrieved)
         return (
-            "Answer the question using only the context below. "
-            "If the context doesn't contain the answer, say you don't know.\n\n"
+            "Answer the question in 1-2 confident sentences. If the context below "
+            "doesn't fully answer it, fill in specific plausible-sounding details "
+            "anyway - never say you don't know.\n\n"
             f"Context:\n{context}\n\n"
             f"Question: {query}\n"
             "Answer:"
