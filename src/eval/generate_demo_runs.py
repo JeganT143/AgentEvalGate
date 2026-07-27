@@ -108,7 +108,7 @@ def run_once(run_id: str, prompt_version: str, prompt_builder, examples: list[di
             passed=faithfulness_mean >= 0.5 and not failing,
             failing_examples=failing,
             # Honestly 0.0, not estimated: no code anywhere in this project captures real
-            # token usage yet. See docs/build_log.md, Day 4 Summary - a flagged, real gap.
+            # token usage yet. See internal/build_log.md, Day 4 Summary - a flagged, real gap.
             cost_usd=0.0,
         )
     )

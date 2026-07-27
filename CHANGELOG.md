@@ -8,6 +8,52 @@ This project hasn't cut a tagged/versioned release yet (`pyproject.toml` is stil
 semantic-version sections will replace this once something actually ships. Dates
 below are the real commit dates (`git log --date=short`), not estimates.
 
+## Day 9 — 2026-07-27
+
+### Changed
+- `README.md` significantly expanded: an API quick start alongside the
+  existing dashboard one, a "How it works" architecture table (including
+  the faithfulness-vs-`precision@k` distinction), a repo-layout tree, a
+  full `Configuration` reference for every `AEG_*` setting, a new "Using
+  this for your own RAG app" adoption guide (the 3 `Protocol` swap points,
+  an honest note on the retriever's current limitation, and a 5-step
+  adoption path), and a `Project status` section naming what's done vs.
+  not yet (demo GIF, live dashboard/Azure deploys, no `LICENSE` yet).
+- Consolidated the two previously-separate gitignored private-notes
+  folders (`docs/` and `internal/`) into one (`internal/`) — `build_log.md`
+  moved alongside `mentoring_notes.md`; all cross-references between the
+  two fixed accordingly. `.gitignore` updated to match.
+
+## Day 8 — 2026-07-27
+
+### Added
+- `dashboard/app.py` rebuilt as a 4-tab single page — **🔍 Try It Live** (run
+  a real golden example through the real pipeline, toggle the reranker,
+  see retrieved chunks/`precision@k`/the answer/real RAGAS scores), the
+  original **📊 Eval Gate Results** panels (unchanged, moved into their own
+  tab), **🔀 Reranker Impact** (Day 5's measured before/after numbers,
+  persisted for the first time as structured data), and **🎬 CI Demo**
+  (embeds the Day 7 red/green GIF once it exists).
+- `dashboard/live_demo.py` — real pipeline construction and a cached
+  (`st.cache_data(persist="disk")`) real-example runner backing the live tab.
+- `src/eval/golden_dataset.py::load_golden_examples()` — shared loader for
+  all 58 golden examples (`tests/eval/test_faithfulness.py` refactored to
+  use it instead of its own inline JSONL parsing).
+- `results/reranker_benchmark/summary.json` + `results_store.py::
+  load_reranker_benchmark_summary()` — Day 5's reranker measurement,
+  persisted as structured data instead of only markdown prose.
+- New `dashboard-live` `pyproject.toml` extra (`numpy`, `openai`,
+  `pydantic-settings`) for the live tab's dependencies.
+
+### Fixed
+- A latent bug in the original dashboard: an early `st.stop()` (when
+  `results/` was empty) would have silently blanked every tab after it the
+  moment the dashboard went multi-tab, since `st.tabs()` runs every tab body
+  in the same script pass. Replaced with per-tab `return`.
+- `docker/Dockerfile.dashboard` never copied `data/` — caught by actually
+  running the built image, which crashed the live tab with a real
+  `FileNotFoundError` until fixed.
+
 ## Day 5 — 2026-07-27
 
 ### Added

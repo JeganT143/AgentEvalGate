@@ -32,6 +32,12 @@ env/
 .idea/
 .DS_Store
 
-# Private/local-only notes (not part of the public repo)
+# Streamlit local config/secrets override (e.g. a project-local secrets.toml with
+# a real API key) - never commit one; pass AEG_API_KEY via .env or the deploy
+# platform's own secrets manager instead.
+.streamlit/
+
+# Private/local-only notes (not part of the public repo) - build_log.md and
+# mentoring_notes.md both live here now (Day 9 / Step 1: previously split across
+# this folder and a separate docs/, consolidated into one).
 internal/
-docs/
