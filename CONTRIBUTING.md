@@ -35,6 +35,15 @@ pytest tests/eval/
 
 There's also a `judge-variance.yml` GitHub Actions workflow (manual `workflow_dispatch` only, not run on every PR) that re-measures judge score variance across repeated runs — it costs several hundred real judge calls, so it's not part of the default test loop.
 
+## Running the dashboard locally
+
+```bash
+uv pip install --python .venv/bin/python -r pyproject.toml --extra dashboard --extra dashboard-live --extra eval
+streamlit run dashboard/app.py
+```
+
+Three of the four tabs (Eval Gate Results, Reranker Impact, CI Demo) work with zero config. The "Try It Live" tab — which runs a real golden example through the real pipeline and a real RAGAS judge call — needs `AEG_API_KEY` in your `.env`; without it, that tab shows an inline message and the rest of the dashboard is unaffected. `--extra dashboard-live` is only needed for that tab (adds `numpy`/`openai`); `--extra eval` (already installed if you followed the setup above) provides the RAGAS/DeepEval judge.
+
 ## Adding a golden example
 
 The golden dataset lives at `data/golden/*.jsonl` — JSONL, one example per line. The field-by-field contract (including *why* each field exists) is documented in [`data/golden/schema.md`](data/golden/schema.md); read that first rather than inferring the shape from an existing row.

@@ -34,6 +34,18 @@ dashboard = [
     "streamlit==1.60.0",
     "pandas==3.0.5",
 ]
+# The 3 packages the dashboard's "Try It Live" tab needs beyond the base `dashboard`
+# extra - deliberately its own group rather than reusing `api` wholesale, which would
+# drag in fastapi/uvicorn/slowapi (dead weight for a Streamlit process, the exact bloat
+# Day 4 / Step 4 split `dashboard` out to avoid). Pins hand-duplicated from `api` - see
+# internal/mentoring_notes.md, Day 8 / Step 3. `ragas`/`deepeval`/`langchain-community`
+# also needed for score_example() come from the existing `eval` extra, installed
+# alongside this one, not folded in here.
+dashboard-live = [
+    "numpy==2.5.1",
+    "openai==2.48.0",
+    "pydantic-settings==2.14.2",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -7,6 +7,7 @@ from src.eval.results_store import (
     append_run_result,
     load_all_run_results,
     load_judge_variance_summary,
+    load_reranker_benchmark_summary,
 )
 
 
@@ -93,6 +94,30 @@ def test_variance_summary_not_picked_up_by_load_all_run_results(tmp_path):
     variance_dir = tmp_path / "judge_variance"
     variance_dir.mkdir()
     (variance_dir / "summary.json").write_text(json.dumps({"total_examples": 50}))
+
+    loaded = load_all_run_results(results_dir=tmp_path)
+
+    assert [r.run_id for r in loaded] == ["run-001"]
+
+
+def test_load_reranker_benchmark_summary_returns_none_when_missing(tmp_path):
+    assert load_reranker_benchmark_summary(path=tmp_path / "nope.json") is None
+
+
+def test_load_reranker_benchmark_summary_reads_committed_file(tmp_path):
+    path = tmp_path / "summary.json"
+    path.write_text(json.dumps({"precision_at_k": {"all": {"off": 0.3667, "on": 0.3867}}}))
+
+    loaded = load_reranker_benchmark_summary(path=path)
+
+    assert loaded == {"precision_at_k": {"all": {"off": 0.3667, "on": 0.3867}}}
+
+
+def test_reranker_benchmark_not_picked_up_by_load_all_run_results(tmp_path):
+    append_run_result(_make_result("run-001", "2026-07-27T10:00:00Z"), results_dir=tmp_path)
+    benchmark_dir = tmp_path / "reranker_benchmark"
+    benchmark_dir.mkdir()
+    (benchmark_dir / "summary.json").write_text(json.dumps({"precision_at_k": {}}))
 
     loaded = load_all_run_results(results_dir=tmp_path)
 

@@ -1,4 +1,3 @@
-import json
 import math
 
 import numpy as np
@@ -9,13 +8,14 @@ from deepeval.test_case import LLMTestCase
 
 from src.config import get_settings
 from src.eval.cache import CachedEmbedder
+from src.eval.golden_dataset import load_golden_examples
 from src.eval.metrics import score_example
 from src.rag.demo_providers import HashingEmbedder
 from src.rag.generators import OpenAIGenerator
 from src.rag.pipeline import RAGPipeline
 from src.rag.retriever import InMemoryRetriever, build_demo_corpus
 
-# Threshold justification (full derivation: docs/build_log.md and
+# Threshold justification (full derivation: internal/build_log.md and
 # internal/mentoring_notes.md, Day 2 / Step 6): measuring all 50 golden examples
 # through the real pipeline + pinned judge showed `typical` faithfulness tightly
 # clustered at 1.0 (28/30) with the only two outliers landing at exactly 0.5 - a
@@ -46,19 +46,7 @@ from src.rag.retriever import InMemoryRetriever, build_demo_corpus
 FAITHFULNESS_THRESHOLD = 0.5
 
 
-def _load_typical_examples() -> list[dict]:
-    rows = []
-    for path in ("data/golden/v0.jsonl", "data/golden/v1.jsonl"):
-        with open(path) as f:
-            for line in f:
-                if line.strip():
-                    row = json.loads(line)
-                    if row["category"] == "typical":
-                        rows.append(row)
-    return rows
-
-
-TYPICAL_EXAMPLES = _load_typical_examples()
+TYPICAL_EXAMPLES = [row for row in load_golden_examples() if row["category"] == "typical"]
 
 
 class RagasFaithfulnessMetric(BaseMetric):

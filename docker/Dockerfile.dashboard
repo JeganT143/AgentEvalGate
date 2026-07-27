@@ -1,6 +1,12 @@
 # Separate image from the (not yet built) API image - see internal/mentoring_notes.md,
 # Day 4 / Step 4, for why: independent deploy/scale cadence, smaller cold starts, no
 # API credentials baked into a component that never needs them.
+#
+# `--extra dashboard-live --extra eval` (Day 8 / Step 3) pull in real cost/weight -
+# ragas/deepeval/langchain-community are the same heavy stack that justified splitting
+# `eval` out in the first place. The dashboard's other 3 tabs still work with zero
+# AEG_API_KEY (dashboard/app.py degrades "Try It Live" gracefully if it's missing) -
+# only that one tab actually needs what these extras add.
 
 # --- builder: resolve and install only what the dashboard needs ---
 FROM python:3.13-slim AS builder
@@ -11,7 +17,7 @@ RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml ./
 RUN uv venv /opt/venv && \
-    uv pip install --python /opt/venv/bin/python -r pyproject.toml --extra dashboard
+    uv pip install --python /opt/venv/bin/python -r pyproject.toml --extra dashboard --extra dashboard-live --extra eval
 
 # --- final: slim runtime, no build tooling, no unrelated components' code ---
 FROM python:3.13-slim
@@ -21,7 +27,9 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY dashboard/ dashboard/
 COPY src/ src/
+COPY data/ data/
 COPY results/ results/
+COPY assets/ assets/
 
 ENV PATH="/opt/venv/bin:$PATH"
 

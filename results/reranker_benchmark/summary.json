@@ -1,0 +1,21 @@
+{
+  "measured_at": "2026-07-27",
+  "source": "Day 5 / Step 3: wired-pipeline before/after measurement, reranker OFF vs ON, real gpt-4o-mini reranker calls, StubGenerator for generation (metrics here are fully determined by retrieve+rerank, independent of the generator - see internal/mentoring_notes.md, Day 5 / Step 3). Covers the 50 v0+v1 examples that existed at measurement time - predates the 8 extra adversarial.jsonl examples added later the same day (Day 5 / Step 4), so it does not cover all 58 golden examples the dashboard's Try It Live tab offers.",
+  "precision_at_k": {
+    "k": 3,
+    "by_category": [
+      {"category": "typical", "n": 30, "off": 0.3333, "on": 0.3333, "delta": 0.0},
+      {"category": "multi_hop", "n": 10, "off": 0.6000, "on": 0.6333, "delta": 0.0333},
+      {"category": "adversarial", "n": 10, "off": 0.2333, "on": 0.3000, "delta": 0.0667}
+    ],
+    "all": {"n": 50, "off": 0.3667, "on": 0.3867, "delta": 0.0200}
+  },
+  "latency_ms_added": {"mean": 1193.5, "median": 1144.5, "p95": 1893.8, "min": 615.4, "max": 3108.4},
+  "cost_added": {
+    "n_calls": 50,
+    "prompt_tokens": 8518,
+    "completion_tokens": 1373,
+    "total_usd": 0.0021,
+    "mean_usd_per_query": 0.000042
+  }
+}

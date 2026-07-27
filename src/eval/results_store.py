@@ -83,3 +83,18 @@ def load_judge_variance_summary(path: Path = DEFAULT_VARIANCE_SUMMARY_PATH) -> d
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+DEFAULT_RERANKER_BENCHMARK_PATH = DEFAULT_RESULTS_DIR / "reranker_benchmark" / "summary.json"
+
+
+def load_reranker_benchmark_summary(path: Path = DEFAULT_RERANKER_BENCHMARK_PATH) -> dict | None:
+    """Load the committed reranker before/after benchmark (Day 5 / Step 3's real
+    wired-pipeline measurement, transcribed - not re-run - into this file, Day 8 / Step 1).
+
+    Returns None if it doesn't exist, matching load_judge_variance_summary's
+    degrade-gracefully contract.
+    """
+    if not path.exists():
+        return None
+    return json.loads(path.read_text())
