@@ -8,10 +8,20 @@ The same way a unit-test suite blocks a merge on a broken function — except th
 
 **One dashboard, the whole project:** _deploying to Streamlit Community Cloud — link coming soon._ Four tabs in one page:
 
-- **🔍 Try It Live** — pick one of the 58 golden examples, toggle the reranker on/off, and watch a real query run through the real pipeline: retrieved chunks, `precision@k`, the generated answer, and real RAGAS faithfulness/context-precision scores from a real judge call.
-- **📊 Eval Gate Results** — the CI gate's run history over time, cost per run, the judge's own measured variance baseline, and which examples are currently failing.
-- **🔀 Reranker Impact** — the real, measured before/after numbers for the reranker (precision@k by category, added latency, added cost).
-- **🎬 CI Demo** — the red→green GIF above, embedded.
+- **Try It Live** — pick one of the 58 golden examples, toggle the reranker on/off, and watch a real query run through the real pipeline: retrieved chunks, `precision@k`, the generated answer, and real RAGAS faithfulness/context-precision scores from a real judge call.
+- **Eval Gate Results** — the CI gate's run history over time, cost per run, the judge's own measured variance baseline, and which examples are currently failing.
+- **Reranker Impact** — the real, measured before/after numbers for the reranker (precision@k by category, added latency, added cost).
+- **CI Demo** — the red→green GIF above, embedded.
+
+## Screenshots
+
+| Try It Live | Eval Gate Results |
+|---|---|
+| ![Try It Live tab: a real golden example run through the real pipeline, showing retrieved chunks, precision@3, the generated answer, and real faithfulness/context-precision scores](assets/screenshots/try-it-live.png) | ![Eval Gate Results tab: judge variance baseline, run totals, and faithfulness/context-precision over time](assets/screenshots/eval-gate-results.png) |
+
+| Reranker Impact |
+|---|
+| ![Reranker Impact tab: precision@3 by category before/after reranking, plus added latency and cost](assets/screenshots/reranker-impact.png) |
 
 ## Quick start: run the dashboard
 
@@ -19,7 +29,7 @@ The same way a unit-test suite blocks a merge on a broken function — except th
 docker build -f docker/Dockerfile.dashboard -t agentevalgate-dashboard . && docker run -p 8501:8501 agentevalgate-dashboard
 ```
 
-Open [http://localhost:8501](http://localhost:8501). Three of the four tabs work immediately with zero configuration. For **🔍 Try It Live** (which makes a real, small-cost OpenAI call per example), pass your key:
+Open [http://localhost:8501](http://localhost:8501). Three of the four tabs work immediately with zero configuration. For **Try It Live** (which makes a real, small-cost OpenAI call per example), pass your key:
 
 ```bash
 docker run -p 8501:8501 -e AEG_API_KEY=sk-... agentevalgate-dashboard
@@ -41,11 +51,22 @@ curl -X POST http://localhost:8000/query -H "Content-Type: application/json" -d 
 
 On every pull request, AgentEvalGate runs a curated golden dataset of queries through the target RAG pipeline, scores the outputs with RAGAS (faithfulness, context precision) via a pinned LLM judge, computes retrieval `precision@k` against ground-truth document ids, asserts against data-derived thresholds with DeepEval, and fails the build if quality regresses. Everything below is a real, working, separately-verified piece of that system — not a roadmap.
 
-## How it works
+## System design
 
+```mermaid
+flowchart LR
+    PR[Pull Request] --> Actions["GitHub Actions<br/>eval-gate.yml"]
+    Golden[("Golden Dataset<br/>58 examples")] --> Actions
+    Actions --> Pipeline["RAG Pipeline<br/>Embed → Retrieve → Rerank → Generate"]
+    Pipeline --> Judge["RAGAS + DeepEval Judge<br/>faithfulness / context precision / precision@k"]
+    Judge --> Gate{"Score ≥ threshold?"}
+    Gate -->|No| Block["Block merge"]
+    Gate -->|Yes| Allow["Allow merge"]
+    Judge --> Results[("results/*.json")]
+    Results --> Dashboard["Streamlit Dashboard"]
 ```
-Query → Embed → Retrieve → Rerank (optional) → Generate → Judge → Gate
-```
+
+Every query also flows through the same pipeline via `POST /query` (FastAPI, rate-limited, CORS-locked) — the CI gate and the API are two callers of the identical `RAGPipeline`, not two separate implementations that could drift apart.
 
 | Stage | What it is | Where |
 |---|---|---|
@@ -77,6 +98,20 @@ tests/
 docker/           # separate images: API and dashboard
 infra/            # Bicep: Azure Container Apps + Key Vault-backed secrets
 ```
+
+### Technology stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.13 |
+| API | FastAPI, Uvicorn, `slowapi` (rate limiting) |
+| RAG pipeline | OpenAI (`gpt-4o-mini`) for generation and reranking, numpy for retrieval |
+| Evaluation | RAGAS, DeepEval, a pinned OpenAI judge model |
+| Dashboard | Streamlit |
+| Testing | pytest (unit tests mock the LLM boundary; eval tests run the real pipeline + judge) |
+| CI/CD | GitHub Actions (`eval-gate.yml` merge-blocking, `judge-variance.yml` manual) |
+| Packaging | `uv`, multi-stage Docker builds (separate API/dashboard images) |
+| Infrastructure | Azure Container Apps (Consumption plan, scale-to-zero), Bicep, Azure Key Vault |
 
 ## Configuration
 
