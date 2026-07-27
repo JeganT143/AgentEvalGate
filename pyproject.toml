@@ -24,6 +24,10 @@ eval = [
     # newest version confirmed to still have it, otherwise `import ragas` fails outright.
     "langchain-community==0.3.27",
 ]
+dashboard = [
+    "streamlit==1.60.0",
+    "pandas==3.0.5",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
