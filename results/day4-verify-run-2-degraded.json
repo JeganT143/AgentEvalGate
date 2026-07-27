@@ -1,0 +1,26 @@
+{
+  "run_id": "day4-verify-run-2-degraded",
+  "timestamp": "2026-07-27T05:35:17Z",
+  "dataset_version": "v1",
+  "prompt_version": "hallucination-demo",
+  "judge_model": "gpt-4o-mini-2024-07-18",
+  "scores": {
+    "faithfulness_mean": 0.6433,
+    "context_precision_mean": 1.0
+  },
+  "failing_examples": [
+    {
+      "id": "typical-002",
+      "category": "typical",
+      "reason": "faithfulness 0.400 < threshold 0.5"
+    },
+    {
+      "id": "typical-003",
+      "category": "typical",
+      "reason": "faithfulness 0.400 < threshold 0.5"
+    }
+  ],
+  "cost_usd": 0.0,
+  "latency_ms": {},
+  "pass": false
+}

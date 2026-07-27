@@ -1,0 +1,15 @@
+{
+  "run_id": "day4-verify-run-1-baseline",
+  "timestamp": "2026-07-27T05:33:45Z",
+  "dataset_version": "v1",
+  "prompt_version": "baseline",
+  "judge_model": "gpt-4o-mini-2024-07-18",
+  "scores": {
+    "faithfulness_mean": 1.0,
+    "context_precision_mean": 1.0
+  },
+  "failing_examples": [],
+  "cost_usd": 0.0,
+  "latency_ms": {},
+  "pass": true
+}
