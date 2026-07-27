@@ -23,6 +23,10 @@ dist/
 venv/
 env/
 
+# Bicep parameter files can hold real secret values (e.g. apiKeyValue) - never commit
+# one. Pass secrets via `--parameters apiKeyValue=$AEG_API_KEY` at deploy time instead.
+*.bicepparam
+
 # IDE / OS
 .vscode/
 .idea/

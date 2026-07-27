@@ -1,0 +1,29 @@
+# Separate image from dashboard/ (see internal/mentoring_notes.md, Day 4 / Step 4)
+# and now deployed on Azure Container Apps' Consumption plan with scale-to-zero
+# (Day 6 / Step 1) - a small final image directly shortens cold-start time on
+# this architecture. See Day 6 / Step 2 for why.
+
+# --- builder: resolve and install only what the API needs ---
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir uv
+
+COPY pyproject.toml ./
+RUN uv venv /opt/venv && \
+    uv pip install --python /opt/venv/bin/python -r pyproject.toml --extra api
+
+# --- final: slim runtime, no build tooling, no unrelated components' code ---
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY src/ src/
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
