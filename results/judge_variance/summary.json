@@ -1,0 +1,29 @@
+{
+  "measured_at": "2026-07-25",
+  "source": "Day 2 / Step 5: 50 golden examples x 3 judge repeats each, pinned judge_model=gpt-4o-mini-2024-07-18, temperature=0, seed=42",
+  "total_examples": 50,
+  "repeats_per_example": 3,
+  "zero_variance_count": 47,
+  "nonzero_variance_examples": [
+    {
+      "id": "multihop-010",
+      "faithfulness_stdev": 0.2357
+    }
+  ],
+  "nan_flip_examples": [
+    "adversarial-007",
+    "multihop-004"
+  ],
+  "faithfulness_run_means": [
+    0.602,
+    0.58,
+    0.602
+  ],
+  "faithfulness_stdev_across_run_means": 0.010371,
+  "context_precision_run_means": [
+    0.5267,
+    0.5267,
+    0.5267
+  ],
+  "context_precision_stdev_across_run_means": 0.0
+}

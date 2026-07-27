@@ -56,10 +56,30 @@ def append_run_result(result: RunResult, results_dir: Path = DEFAULT_RESULTS_DIR
 
 
 def load_all_run_results(results_dir: Path = DEFAULT_RESULTS_DIR) -> list[RunResult]:
-    """Load every recorded run result, oldest to newest by timestamp."""
+    """Load every recorded run result, oldest to newest by timestamp.
+
+    Non-recursive glob deliberately: results_dir may hold other kinds of records
+    in subdirectories (e.g. judge_variance/summary.json) that aren't RunResults
+    and must never be picked up here.
+    """
     if not results_dir.exists():
         return []
     results = [
         RunResult.from_dict(json.loads(path.read_text())) for path in sorted(results_dir.glob("*.json"))
     ]
     return sorted(results, key=lambda r: r.timestamp)
+
+
+DEFAULT_VARIANCE_SUMMARY_PATH = DEFAULT_RESULTS_DIR / "judge_variance" / "summary.json"
+
+
+def load_judge_variance_summary(path: Path = DEFAULT_VARIANCE_SUMMARY_PATH) -> dict | None:
+    """Load the committed judge-variance baseline (Day 2 / Step 5's real measurement,
+    promoted to a small summary file - see internal/mentoring_notes.md, Day 4 / Step 3).
+
+    Returns None if it doesn't exist rather than raising - a dashboard panel reading
+    this should degrade to "not measured yet", not crash the whole page.
+    """
+    if not path.exists():
+        return None
+    return json.loads(path.read_text())

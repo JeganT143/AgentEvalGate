@@ -1,9 +1,11 @@
 """Read-only Streamlit dashboard over the eval gate's run results.
 
-Reads exclusively through results_store.load_all_run_results() (Day 4 / Step 1's
-seam) - never touches results/*.json directly, so swapping the storage backend
-later never requires touching this file. See internal/mentoring_notes.md
-(Day 4 / Step 2) for why trends over time, not just the latest run, are the point.
+Reads exclusively through results_store's functions (Day 4 / Step 1's seam) -
+never touches results/*.json directly, so swapping the storage backend later
+never requires touching this file. See internal/mentoring_notes.md
+(Day 4 / Step 2-3) for why trends over time (not just the latest run), which
+categories are failing (not just an aggregate score), and the judge's own
+variance are each the point of their panel.
 
 Run locally: streamlit run dashboard/app.py
 """
@@ -20,11 +22,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 import streamlit as st
 
-from src.eval.results_store import load_all_run_results
+from src.eval.results_store import load_all_run_results, load_judge_variance_summary
 
 st.set_page_config(page_title="AgentEvalGate Dashboard", page_icon="\U0001f4ca", layout="wide")
 st.title("AgentEvalGate — Run Results")
 st.caption("Read-only view over the eval gate's recorded CI runs.")
+
+# Independent of run history - a fresh deploy with zero CI runs yet still shows
+# the judge's own measured reliability baseline.
+st.subheader("Judge Variance Baseline")
+variance = load_judge_variance_summary()
+if variance is None:
+    st.caption("Not measured yet.")
+else:
+    vcol1, vcol2, vcol3 = st.columns(3)
+    vcol1.metric(
+        "Examples with zero variance",
+        f"{variance['zero_variance_count']}/{variance['total_examples']}",
+    )
+    vcol2.metric("Faithfulness stdev (across runs)", f"{variance['faithfulness_stdev_across_run_means']:.4f}")
+    vcol3.metric(
+        "Context precision stdev (across runs)",
+        f"{variance['context_precision_stdev_across_run_means']:.4f}",
+    )
+    with st.expander("Non-zero-variance and NaN-flip examples"):
+        st.write("Graded variance:", variance["nonzero_variance_examples"])
+        st.write("NaN-flip (numeric ↔ NaN across identical repeats):", variance["nan_flip_examples"])
+        st.caption(variance["source"])
 
 results = load_all_run_results()
 
@@ -59,6 +83,13 @@ st.line_chart(df.set_index("timestamp")[["faithfulness", "context_precision"]])
 
 st.subheader("Cost per Run")
 st.bar_chart(df.set_index("run_id")[["cost_usd"]])
+
+st.subheader("Currently Failing Examples")
+latest_run = results[-1]
+if latest_run.failing_examples:
+    st.dataframe(pd.DataFrame(latest_run.failing_examples), use_container_width=True, hide_index=True)
+else:
+    st.success("No failing examples in the latest run.")
 
 st.subheader("Run History")
 st.dataframe(

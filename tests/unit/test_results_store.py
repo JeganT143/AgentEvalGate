@@ -1,6 +1,13 @@
+import json
+
 import pytest
 
-from src.eval.results_store import RunResult, append_run_result, load_all_run_results
+from src.eval.results_store import (
+    RunResult,
+    append_run_result,
+    load_all_run_results,
+    load_judge_variance_summary,
+)
 
 
 def _make_result(run_id: str, timestamp: str, passed: bool = True) -> RunResult:
@@ -66,3 +73,27 @@ def test_load_all_run_results_sorted_oldest_to_newest(tmp_path):
     loaded = load_all_run_results(results_dir=tmp_path)
 
     assert [r.run_id for r in loaded] == ["run-a", "run-b", "run-c"]
+
+
+def test_load_judge_variance_summary_returns_none_when_missing(tmp_path):
+    assert load_judge_variance_summary(path=tmp_path / "nope.json") is None
+
+
+def test_load_judge_variance_summary_reads_committed_file(tmp_path):
+    path = tmp_path / "summary.json"
+    path.write_text(json.dumps({"total_examples": 50, "zero_variance_count": 47}))
+
+    loaded = load_judge_variance_summary(path=path)
+
+    assert loaded == {"total_examples": 50, "zero_variance_count": 47}
+
+
+def test_variance_summary_not_picked_up_by_load_all_run_results(tmp_path):
+    append_run_result(_make_result("run-001", "2026-07-27T10:00:00Z"), results_dir=tmp_path)
+    variance_dir = tmp_path / "judge_variance"
+    variance_dir.mkdir()
+    (variance_dir / "summary.json").write_text(json.dumps({"total_examples": 50}))
+
+    loaded = load_all_run_results(results_dir=tmp_path)
+
+    assert [r.run_id for r in loaded] == ["run-001"]
