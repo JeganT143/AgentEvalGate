@@ -1,0 +1,9 @@
+# Streamlit Community Cloud looks for a dependency file in the entrypoint's own
+# directory first, before falling back to the repo root - this file exists specifically
+# so deployment never has to guess how to parse pyproject.toml's custom extras layout
+# (Day 4 / Step 4 restructured it to an empty base [project.dependencies] with everything
+# under extras groups; Streamlit Cloud's pyproject.toml support is Poetry-oriented, not a
+# safe bet for that shape). Must be kept in sync with pyproject.toml's "dashboard" extras
+# group by hand - see internal/mentoring_notes.md, Day 4 / Step 5.
+streamlit==1.60.0
+pandas==3.0.5
