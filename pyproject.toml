@@ -3,15 +3,20 @@ name = "agentevalgate"
 version = "0.1.0"
 description = "Merge-blocking CI evaluation gate for RAG applications"
 requires-python = ">=3.11"
-dependencies = [
+dependencies = []
+
+[project.optional-dependencies]
+# No unconditional base dependencies: API, eval harness, and dashboard are three
+# separately-deployed components (Day 4 / Step 4) with genuinely non-overlapping
+# needs - the dashboard, in particular, needs none of this. See
+# internal/mentoring_notes.md (Day 4 / Step 4) for why this changed today.
+api = [
     "fastapi==0.139.2",
     "uvicorn==0.51.0",
     "pydantic-settings==2.14.2",
     "numpy==2.5.1",
     "openai==2.48.0",
 ]
-
-[project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
 ]

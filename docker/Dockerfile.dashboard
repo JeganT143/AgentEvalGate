@@ -1,0 +1,30 @@
+# Separate image from the (not yet built) API image - see internal/mentoring_notes.md,
+# Day 4 / Step 4, for why: independent deploy/scale cadence, smaller cold starts, no
+# API credentials baked into a component that never needs them.
+
+# --- builder: resolve and install only what the dashboard needs ---
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir uv
+
+COPY pyproject.toml ./
+RUN uv venv /opt/venv && \
+    uv pip install --python /opt/venv/bin/python -r pyproject.toml --extra dashboard
+
+# --- final: slim runtime, no build tooling, no unrelated components' code ---
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY dashboard/ dashboard/
+COPY src/ src/
+COPY results/ results/
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "dashboard/app.py", "--server.address=0.0.0.0", "--server.port=8501"]

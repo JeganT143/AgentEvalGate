@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
-          uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval
+          uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval --extra api
 
       - name: Measure judge variance
         env:
