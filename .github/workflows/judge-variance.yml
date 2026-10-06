@@ -2,8 +2,8 @@ name: Judge Variance Measurement
 
 # Manual only (workflow_dispatch), not on every PR - this is a diagnostic
 # re-measurement (Day 2 / Step 5's methodology, Day 3 / Step 5), not part of
-# the merge-blocking gate itself. Makes ~800 real, paid judge calls across all
-# 50 golden examples x 3 repeats - triggered deliberately, not automatically.
+# the merge-blocking gate itself. Makes ~900 real, paid judge calls across all
+# 58 golden examples x 3 repeats - triggered deliberately, not automatically.
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv venv
+          uv venv --python 3.13
           uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval --extra api
 
       - name: Measure judge variance

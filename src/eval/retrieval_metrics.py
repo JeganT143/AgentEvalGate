@@ -28,3 +28,37 @@ def precision_at_k(retrieved_ids: list[str], expected_context_ids: list[str], k:
     expected = set(expected_context_ids)
     relevant_retrieved = sum(1 for doc_id in top_k_ids if doc_id in expected)
     return relevant_retrieved / len(top_k_ids)
+
+
+def hit_at_k(retrieved_ids: list[str], expected_context_ids: list[str], k: int) -> float | None:
+    """1.0 if at least one relevant document is in the top k, else 0.0.
+
+    The readable companion to precision_at_k: a `typical` question has exactly one
+    relevant document, so its precision@3 can never exceed 1/3 even when retrieval is
+    perfect - hit@3 answers the question a reader actually has ("did search find it?").
+
+    Returns None when there is nothing to find (expected_context_ids is empty, e.g. an
+    out-of-corpus adversarial question) - "not applicable", not a 0.0 that would read as
+    a retrieval failure.
+    """
+    if k <= 0:
+        raise ValueError(f"k must be positive, got {k}")
+    if not expected_context_ids:
+        return None
+    expected = set(expected_context_ids)
+    return 1.0 if any(doc_id in expected for doc_id in retrieved_ids[:k]) else 0.0
+
+
+def recall_at_k(retrieved_ids: list[str], expected_context_ids: list[str], k: int) -> float | None:
+    """Fraction of the relevant documents that made it into the top k.
+
+    The multi-hop signal: a question needing doc-4 AND doc-5 scores 0.5 when only one of
+    them was retrieved. None when there is nothing to find, matching hit_at_k.
+    """
+    if k <= 0:
+        raise ValueError(f"k must be positive, got {k}")
+    expected = set(expected_context_ids)
+    if not expected:
+        return None
+    found = expected.intersection(retrieved_ids[:k])
+    return len(found) / len(expected)

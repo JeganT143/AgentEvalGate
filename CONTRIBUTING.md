@@ -5,7 +5,7 @@
 Requires Python 3.11+ and [`uv`](https://github.com/astral-sh/uv).
 
 ```bash
-uv venv
+uv venv --python 3.13
 uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval --extra api
 ```
 
@@ -27,7 +27,14 @@ AEG_API_KEY=sk-...
 pytest tests/unit/
 ```
 
-**Eval tests** — run the real golden dataset through the real pipeline and a real, pinned LLM judge (RAGAS + DeepEval), asserted against a data-derived faithfulness threshold. Needs `AEG_API_KEY`, costs real (small) money per run, and takes about 10 minutes for the full `typical` set (measured: 597.89s for 30 examples):
+CI runs these first, as their own job, on every pull request. They need no secret, so they run (and must pass) before the paid eval gate starts.
+
+**Eval tests (the gate itself)** — run the real golden dataset through the real pipeline, 51 checks in all:
+- 30 `typical` questions graded by a real, pinned LLM judge (RAGAS + DeepEval) against the faithfulness threshold in `src/eval/policy.py`
+- 11 out-of-corpus `adversarial` questions that must be declined (`src/eval/refusal.py`, no judge)
+- 10 `multi_hop` questions whose search must return every required document (retrieval only, no judge)
+
+Needs `AEG_API_KEY` and takes about 10 minutes (measured: 597.89s for the 30 judged examples; the other checks add seconds). Real cost is metered and reported, about $0.03 per full run. A per-question pass/fail table, with cost, is printed at the end and written to `.cache/gate-report/` (in CI, to the run's summary page and the `gate-report` artifact):
 
 ```bash
 pytest tests/eval/
@@ -42,7 +49,9 @@ uv pip install --python .venv/bin/python -r pyproject.toml --extra dashboard --e
 streamlit run dashboard/app.py
 ```
 
-Three of the four tabs (Eval Gate Results, Reranker Impact, CI Demo) work with zero config. The "Try It Live" tab — which runs a real golden example through the real pipeline and a real RAGAS judge call — needs `AEG_API_KEY` in your `.env`; without it, that tab shows an inline message and the rest of the dashboard is unaffected. `--extra dashboard-live` is only needed for that tab (adds `numpy`/`openai`); `--extra eval` (already installed if you followed the setup above) provides the RAGAS/DeepEval judge.
+Every tab except "Try it live" works with zero config. "Try it live" — which runs a real golden example through the real pipeline and a real RAGAS judge call — needs `AEG_API_KEY` in your `.env`; without it, that tab shows an inline message and the rest of the dashboard is unaffected. The heavy judge stack is only imported when someone presses Run, so it never slows the first page load.
+
+The dashboard is split by concern: `dashboard/app.py` is layout only, `content.py` holds all user-facing copy (write it for someone who has never heard of RAG), `theme.py` the visual identity, `charts.py` the Altair charts, and `verdict.py` the pure, unit-tested pass/block logic for a live run. Streamlit only hot-reloads `app.py`, so restart the server after editing any of the others. `--extra dashboard-live` is only needed for that tab (adds `numpy`/`openai`); `--extra eval` (already installed if you followed the setup above) provides the RAGAS/DeepEval judge.
 
 ## Adding a golden example
 
@@ -53,10 +62,22 @@ In short, each line needs:
 - `id` — stable once assigned. Never renumber or reuse an existing id; continue the existing per-category sequence (e.g. the next `typical` id after `typical-030` is `typical-031`).
 - `query` — the question to run through the pipeline.
 - `expected_context_ids` — ground-truth document ids from the demo corpus (`src/rag/retriever.py::build_demo_corpus`). Verify every id you reference actually exists in the corpus before committing — a typo'd id silently makes an example unscoreable rather than failing loudly.
-- `category` — `typical` / `multi_hop` / `adversarial`. The target split across the dataset is roughly 60/20/20; see `schema.md` for why an unbalanced dataset makes the CI gate structurally unable to catch most real regressions.
+- `category` — `typical` / `multi_hop` / `adversarial`. The target split across the dataset is roughly 60/20/20; see `schema.md` for why an unbalanced dataset makes the CI gate structurally unable to catch most real regressions. An `adversarial` example with `expected_context_ids: []` is automatically gated on the pipeline declining to answer it, so only use an empty list when no corpus document genuinely answers the question.
 - `difficulty` — `easy` / `medium` / `hard`, independent of `category`.
 - `reference_answer` — optional; add it for harder examples where spot-checking judge quality matters.
 
 Either append to an existing file (`v1.jsonl` for general-purpose growth) or start a new, purpose-named file (see `adversarial.jsonl` for an example of a focused sub-collection) — both patterns are already in use, pick whichever fits the example you're adding.
 
+A `multi_hop` example is gated on search returning every id in `expected_context_ids`, so list exactly the documents the answer genuinely depends on.
+
 Golden-set changes affect what the merge gate actually tests, not just what it computes — review them with the same rigor as a code change, not less.
+
+## Refreshing the recorded data
+
+The dashboard reads committed measurements from `results/`. Each one is reproducible:
+
+```bash
+python -m src.eval.generate_demo_runs --full-gate   # every gated check, both prompts, metered (~$0.06)
+python -m src.eval.benchmark_reranker               # reranker off vs on (~$0.003)
+python scripts/record_demo_gif.py --url http://localhost:8501   # assets/demo.gif, needs playwright + pillow
+```

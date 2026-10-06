@@ -21,34 +21,10 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import numpy as np
-
-from src.config import get_settings
+from src.eval.golden_dataset import load_golden_examples
 from src.eval.metrics import score_example
-from src.rag.demo_providers import HashingEmbedder
-from src.rag.generators import OpenAIGenerator
+from src.rag.factory import build_demo_pipeline
 from src.rag.pipeline import RAGPipeline
-from src.rag.retriever import InMemoryRetriever, build_demo_corpus
-
-GOLDEN_FILES = ("data/golden/v0.jsonl", "data/golden/v1.jsonl")
-
-
-def load_examples() -> list[dict]:
-    rows = []
-    for path in GOLDEN_FILES:
-        with open(path) as f:
-            rows += [json.loads(line) for line in f if line.strip()]
-    return rows
-
-
-def build_pipeline() -> RAGPipeline:
-    settings = get_settings()
-    embedder = HashingEmbedder()
-    corpus = build_demo_corpus()
-    embeddings = np.stack([embedder.embed(doc.text) for doc in corpus])
-    retriever = InMemoryRetriever(documents=corpus, embeddings=embeddings)
-    generator = OpenAIGenerator(api_key=settings.api_key.get_secret_value(), model_name=settings.model_name)
-    return RAGPipeline(embedder=embedder, retriever=retriever, generator=generator)
 
 
 def process_example(example: dict, pipeline: RAGPipeline, repeats: int) -> dict:
@@ -124,8 +100,11 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path("variance_results.json"))
     args = parser.parse_args()
 
-    examples = load_examples()
-    pipeline = build_pipeline()
+    # Every golden file, adversarial.jsonl included - the original measurement predates
+    # that file and covered v0+v1 only (50 examples); results/judge_variance/summary.json
+    # records which population it was measured on.
+    examples = load_golden_examples()
+    pipeline = build_demo_pipeline()
 
     start = time.time()
     results = []

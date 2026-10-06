@@ -86,6 +86,9 @@ def load_judge_variance_summary(path: Path = DEFAULT_VARIANCE_SUMMARY_PATH) -> d
 
 
 DEFAULT_RERANKER_BENCHMARK_PATH = DEFAULT_RESULTS_DIR / "reranker_benchmark" / "summary.json"
+# The original Day 5 measurement, made with the offline HashingEmbedder - kept so the
+# dashboard can show what changed once real embeddings replaced it.
+OFFLINE_EMBEDDER_RERANKER_BENCHMARK_PATH = DEFAULT_RESULTS_DIR / "reranker_benchmark" / "2026-07-27-offline-embedder.json"
 
 
 def load_reranker_benchmark_summary(path: Path = DEFAULT_RERANKER_BENCHMARK_PATH) -> dict | None:
@@ -98,3 +101,18 @@ def load_reranker_benchmark_summary(path: Path = DEFAULT_RERANKER_BENCHMARK_PATH
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+DEFAULT_GATE_REPORTS_DIR = DEFAULT_RESULTS_DIR / "gate_reports"
+
+
+def load_gate_reports(reports_dir: Path = DEFAULT_GATE_REPORTS_DIR) -> dict[str, dict]:
+    """Load committed per-question gate reports (src/eval/gate_report.py's JSON), keyed by run_id.
+
+    Only some runs have one (full-gate runs recorded with
+    `python -m src.eval.generate_demo_runs --full-gate`); an empty dict when none exist.
+    """
+    if not reports_dir.exists():
+        return {}
+    reports = [json.loads(path.read_text()) for path in sorted(reports_dir.glob("*.json"))]
+    return {report["run_id"]: report for report in reports}

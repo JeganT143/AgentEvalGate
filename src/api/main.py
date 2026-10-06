@@ -1,19 +1,16 @@
 from functools import lru_cache
 
-import numpy as np
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from src.config import get_settings
-from src.rag.demo_providers import HashingEmbedder
-from src.rag.generators import OpenAIGenerator
+from src.rag.factory import build_demo_pipeline
 from src.rag.pipeline import RAGPipeline
-from src.rag.retriever import InMemoryRetriever, build_demo_corpus
 
 app = FastAPI(title="AgentEvalGate API")
 
@@ -46,21 +43,16 @@ app.add_middleware(SlowAPIMiddleware)
 def get_pipeline() -> RAGPipeline:
     # HashingEmbedder is still today's placeholder Embedder (see src/rag/demo_providers.py) -
     # only the Generator is a real provider call now. Swapping either later means changing
-    # what's constructed here, not RAGPipeline or this endpoint.
-    settings = get_settings()
-    embedder = HashingEmbedder()
-    corpus = build_demo_corpus()
-    embeddings = np.stack([embedder.embed(doc.text) for doc in corpus])
-    retriever = InMemoryRetriever(documents=corpus, embeddings=embeddings)
-    generator = OpenAIGenerator(api_key=settings.api_key.get_secret_value(), model_name=settings.model_name)
-    return RAGPipeline(embedder=embedder, retriever=retriever, generator=generator)
+    # what build_demo_pipeline() constructs, not RAGPipeline or this endpoint.
+    return build_demo_pipeline()
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=1000)
 
 
 class RetrievedChunk(BaseModel):
+    id: str
     text: str
     score: float
 
@@ -68,6 +60,13 @@ class RetrievedChunk(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     retrieved_context: list[RetrievedChunk]
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    # Liveness probe for container platforms (Cloud Run, Container Apps) - deliberately
+    # touches no pipeline/LLM code, so it's free, fast, and never rate-limited.
+    return {"status": "ok"}
 
 
 @app.post("/query", response_model=QueryResponse)
@@ -83,6 +82,7 @@ def query(
     return QueryResponse(
         answer=result.answer,
         retrieved_context=[
-            RetrievedChunk(text=r.document.text, score=r.score) for r in result.retrieved_context
+            RetrievedChunk(id=r.document.id, text=r.document.text, score=r.score)
+            for r in result.retrieved_context
         ],
     )

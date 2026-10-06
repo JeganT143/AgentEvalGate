@@ -1,52 +1,24 @@
 import math
 
-import numpy as np
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
 from src.config import get_settings
-from src.eval.cache import CachedEmbedder
+from src.eval.gate_report import GateReport, GateRow
 from src.eval.golden_dataset import load_golden_examples
 from src.eval.metrics import score_example
-from src.rag.demo_providers import HashingEmbedder
-from src.rag.generators import OpenAIGenerator
+from src.eval.policy import FAITHFULNESS_GATED_CATEGORIES, FAITHFULNESS_THRESHOLD
+from src.rag.factory import build_demo_pipeline
 from src.rag.pipeline import RAGPipeline
-from src.rag.retriever import InMemoryRetriever, build_demo_corpus
+from src.rag.usage import UsageMeter, track_usage
 
-# Threshold justification (full derivation: internal/build_log.md and
-# internal/mentoring_notes.md, Day 2 / Step 6): measuring all 50 golden examples
-# through the real pipeline + pinned judge showed `typical` faithfulness tightly
-# clustered at 1.0 (28/30) with the only two outliers landing at exactly 0.5 - a
-# known RAGAS atomic-statement-decomposition quirk on answers manually verified
-# as fully correct and grounded (e.g. "FastAPI uses type hints to help build
-# APIs." for a question the context directly answers). 0.5 is therefore the
-# empirical floor of today's known-good baseline, not a round number picked in
-# the abstract: it's the lowest score any manually-verified-correct typical
-# answer has produced, so the gate currently passes the real baseline exactly
-# as measured, while still catching anything that scores below what "correct"
-# has ever measured as.
-#
-# Scoped to `typical` only. The same measurement showed `multi_hop` (mean 0.05)
-# and `adversarial` (mean ~0.0, one NaN) faithfulness sitting nowhere near this
-# range - not because those answers are equally bad, but for two different
-# reasons neither of which this threshold (or this metric) is the right tool
-# for: multi_hop is a known, tracked retrieval-quality gap (the placeholder
-# hashing embedder can't reliably retrieve multiple relevant chunks at once -
-# Day 1 / Step 4), and adversarial answers that correctly decline to answer
-# ("I don't know") score near-zero faithfulness precisely BECAUSE they contain
-# no checkable grounded claims - faithfulness cannot distinguish a correct
-# decline from a hallucination for that category. Pooling all three into one
-# threshold would either be meaninglessly lenient (anchored low enough to pass
-# multi_hop/adversarial) or produce ~20 permanently-red tests that never signal
-# a new regression - exactly the "flaky/meaningless gate erodes trust" failure
-# mode from Day 2 / Step 5, just from a different cause. multi_hop and
-# adversarial need their own metrics/thresholds in a later step, not this one.
-FAITHFULNESS_THRESHOLD = 0.5
+# The threshold and its full, data-derived justification live in src/eval/policy.py,
+# shared with the dashboard so the live demo grades against the exact same bar.
 
 
-TYPICAL_EXAMPLES = [row for row in load_golden_examples() if row["category"] == "typical"]
+TYPICAL_EXAMPLES = [row for row in load_golden_examples() if row["category"] in FAITHFULNESS_GATED_CATEGORIES]
 
 
 class RagasFaithfulnessMetric(BaseMetric):
@@ -112,28 +84,48 @@ class RagasFaithfulnessMetric(BaseMetric):
 
 @pytest.fixture(scope="module")
 def pipeline() -> RAGPipeline:
-    settings = get_settings()
-    # CachedEmbedder wraps today's free placeholder mainly to exercise/demonstrate the
-    # cache mechanism (Day 3 / Step 3-4) - the real payoff lands once a real embeddings
-    # client replaces HashingEmbedder, at which point this line is the only thing that
-    # needs to change.
-    embedder = CachedEmbedder(HashingEmbedder(), model_name=settings.embedding_model_name)
-    corpus = build_demo_corpus()
-    embeddings = np.stack([embedder.embed(doc.text) for doc in corpus])
-    retriever = InMemoryRetriever(documents=corpus, embeddings=embeddings)
-    generator = OpenAIGenerator(api_key=settings.api_key.get_secret_value(), model_name=settings.model_name)
-    return RAGPipeline(embedder=embedder, retriever=retriever, generator=generator)
+    # The embedder Settings.embedder selects - real OpenAI embeddings behind CachedEmbedder
+    # by default (src/rag/factory.py::build_embedder), so the gate tests the same retrieval
+    # the API and dashboard use.
+    return build_demo_pipeline(get_settings())
+
+
+def _gate_row(
+    example: dict, metric: RagasFaithfulnessMetric, exc: Exception | None, meter: UsageMeter
+) -> GateRow:
+    if metric.score is None:
+        # Never scored: the pipeline or the judge call itself blew up (bad API key, network,
+        # quota) - recorded as an error so it can't be misread as a quality regression.
+        error = f"{type(exc).__name__}: {exc}" if exc else "example was not scored"
+        return GateRow(
+            example_id=example["id"], category=example["category"], check="faithfulness",
+            passed=False, threshold=metric.threshold, error=error[:300], cost_usd=meter.cost_usd,
+        )
+    return GateRow(
+        example_id=example["id"], category=example["category"], check="faithfulness",
+        passed=bool(metric.success), score=metric.score, threshold=metric.threshold,
+        detail=metric.reason or "", context_precision=metric.context_precision, cost_usd=meter.cost_usd,
+    )
 
 
 @pytest.mark.parametrize("example", TYPICAL_EXAMPLES, ids=[e["id"] for e in TYPICAL_EXAMPLES])
-def test_faithfulness(example: dict, pipeline: RAGPipeline) -> None:
+def test_faithfulness(example: dict, pipeline: RAGPipeline, gate_report: GateReport) -> None:
     """Runs a `typical` golden example through the real pipeline and real judge,
     asserting RAGAS faithfulness >= FAITHFULNESS_THRESHOLD via DeepEval's assert_test.
     """
-    result = pipeline.answer(example["query"])
-    test_case = LLMTestCase(
-        input=example["query"],
-        actual_output=result.answer,
-        retrieval_context=[r.document.text for r in result.retrieved_context],
-    )
-    assert_test(test_case, [RagasFaithfulnessMetric()], run_async=False)
+    metric = RagasFaithfulnessMetric()
+    caught: Exception | None = None
+    with track_usage() as meter:
+        try:
+            result = pipeline.answer(example["query"])
+            test_case = LLMTestCase(
+                input=example["query"],
+                actual_output=result.answer,
+                retrieval_context=[r.document.text for r in result.retrieved_context],
+            )
+            assert_test(test_case, [metric], run_async=False)
+        except Exception as exc:
+            caught = exc
+            raise
+        finally:
+            gate_report.record(_gate_row(example, metric, caught, meter))

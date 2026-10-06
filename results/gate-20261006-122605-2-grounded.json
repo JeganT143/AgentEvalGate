@@ -1,0 +1,17 @@
+{
+  "run_id": "gate-20261006-122605-2-grounded",
+  "timestamp": "2026-10-06T12:28:25Z",
+  "dataset_version": "v1",
+  "prompt_version": "baseline",
+  "judge_model": "gpt-4o-mini-2024-07-18",
+  "scores": {
+    "faithfulness_mean": 0.9722,
+    "context_precision_mean": 1.0,
+    "decline_rate": 1.0,
+    "retrieval_pass_rate": 1.0
+  },
+  "failing_examples": [],
+  "cost_usd": 0.027431,
+  "latency_ms": {},
+  "pass": true
+}

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from openai import OpenAI
 
+from src.rag.usage import metered_http_client
+
 
 class OpenAIGenerator:
     """Generator seam implementation backed by a real OpenAI chat completion call.
@@ -12,7 +14,7 @@ class OpenAIGenerator:
     """
 
     def __init__(self, api_key: str, model_name: str) -> None:
-        self._client = OpenAI(api_key=api_key)
+        self._client = OpenAI(api_key=api_key, http_client=metered_http_client())
         self._model_name = model_name
 
     def generate(self, prompt: str) -> str:

@@ -25,6 +25,9 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
+# Theme tokens (primaryColor etc.) - without this the deployed dashboard silently fell
+# back to Streamlit's default red accent instead of dashboard/theme.py's palette.
+COPY .streamlit/ .streamlit/
 COPY dashboard/ dashboard/
 COPY src/ src/
 COPY data/ data/

@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     model_name: str = "gpt-4o-mini"
     api_key: SecretStr
     embedding_model_name: str = "text-embedding-3-small"
+    # Which Embedder the pipeline uses: "openai" (real embeddings via embedding_model_name,
+    # cached by CachedEmbedder) or "hashing" (the free, offline word-overlap placeholder -
+    # no embeddings API calls, much weaker retrieval, multi-hop questions mostly fail).
+    embedder: Literal["openai", "hashing"] = "openai"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     # The only browser origin allowed to call the API cross-origin (see src/api/main.py's
     # CORSMiddleware). Defaults to the dashboard's local dev port; override in production

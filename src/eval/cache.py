@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -43,6 +44,9 @@ class CachedEmbedder:
         self._model_name = model_name
         self._cache_path = cache_path
         self._cache: dict[str, list[float]] = self._load()
+        # One embedder is shared across threads (Streamlit sessions, the full-gate thread
+        # pool) - the lock keeps the dict and the on-disk JSON consistent.
+        self._lock = threading.Lock()
         self.hits = 0
         self.misses = 0
 
@@ -56,19 +60,28 @@ class CachedEmbedder:
         self._cache_path.write_text(json.dumps(self._cache))
 
     def _key(self, text: str) -> str:
-        return hashlib.sha256(f"{self._model_name}:{text}".encode("utf-8")).hexdigest()
+        # The inner embedder's class is part of the key, not just the model name: the eval
+        # gate used to wrap the offline HashingEmbedder under the label
+        # "text-embedding-3-small", which filed 256-dim hashing vectors under the real
+        # model's name - and served them to OpenAIEmbedder once it existed (a shape mismatch
+        # at retrieval time). Keying on the implementation too makes that collision impossible
+        # and orphans the mislabeled entries.
+        namespace = f"{type(self._embedder).__name__}:{self._model_name}"
+        return hashlib.sha256(f"{namespace}:{text}".encode("utf-8")).hexdigest()
 
     def embed(self, text: str) -> np.ndarray:
         key = self._key(text)
-        cached = self._cache.get(key)
-        if cached is not None:
-            self.hits += 1
-            logger.info("CACHE HIT  (%s): %r", key[:8], _preview(text))
-            return np.array(cached)
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None:
+                self.hits += 1
+                logger.info("CACHE HIT  (%s): %r", key[:8], _preview(text))
+                return np.array(cached)
+            self.misses += 1
 
-        self.misses += 1
         logger.info("CACHE MISS (%s): %r - re-embedding", key[:8], _preview(text))
         vector = self._embedder.embed(text)
-        self._cache[key] = vector.tolist()
-        self._save()
+        with self._lock:
+            self._cache[key] = vector.tolist()
+            self._save()
         return vector

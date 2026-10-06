@@ -5,8 +5,17 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+
+# A newer push to the same PR makes the in-flight (paid, ~10 min) run obsolete.
+concurrency:
+  group: eval-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  eval-gate:
+  unit-tests:
+    name: Unit tests (free, no API key)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,11 +25,68 @@ jobs:
         uses: astral-sh/setup-uv@v9.0.0
 
       - name: Install dependencies
+        # Python pinned to the same 3.13 the Docker images use - an unpinned `uv venv`
+        # picks whatever interpreter the runner image happens to ship.
         run: |
-          uv venv
+          uv venv --python 3.13
           uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval --extra api
 
+      - name: Run unit tests
+        run: .venv/bin/python -m pytest tests/unit/ -q
+
+  eval-gate:
+    name: Eval gate (real pipeline + pinned judge)
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    env:
+      AEG_API_KEY: ${{ secrets.AEG_API_KEY }}
+      AEG_GATE_REPORT_DIR: gate-report
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # Fails in seconds, with a readable reason, when the key is missing, rejected or out
+      # of quota - instead of 30 tests each dying on a 401 traceback, which reads exactly
+      # like an answer-quality regression on the PR's checks list.
+      - name: Preflight - check the OpenAI key
+        run: |
+          if [ -z "$AEG_API_KEY" ]; then
+            if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+              echo "::error title=Eval gate cannot run on a fork PR::GitHub withholds repository secrets from fork pull requests, so the answer-quality gate could not run. A maintainer needs to run it from a branch in this repository before merging."
+            else
+              echo "::error title=AEG_API_KEY secret is not set::Add an OpenAI API key as the repository secret AEG_API_KEY (Settings -> Secrets and variables -> Actions)."
+            fi
+            exit 1
+          fi
+          body=$(mktemp)
+          status=$(curl -sS -o "$body" -w "%{http_code}" https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $AEG_API_KEY" -H "Content-Type: application/json" \
+            -d '{"model":"gpt-4o-mini","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}')
+          message=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('error',{}).get('message',''))" "$body" 2>/dev/null || true)
+          case "$status" in
+            200) echo "OpenAI key OK" ;;
+            401) echo "::error title=AEG_API_KEY was rejected (401)::The repository secret is invalid or revoked - replace it. This is a configuration problem, not an answer-quality regression. OpenAI said: $message"; exit 1 ;;
+            429) echo "::error title=OpenAI quota or rate limit (429)::$message"; exit 1 ;;
+            *)   echo "::warning title=OpenAI preflight returned HTTP $status::$message - continuing; the gate itself will report any per-example errors." ;;
+          esac
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+
+      - name: Install dependencies
+        run: |
+          uv venv --python 3.13
+          uv pip install --python .venv/bin/python -r pyproject.toml --extra dev --extra eval --extra api
+
+      # Writes a per-question pass/fail table to this run's summary page
+      # (tests/eval/conftest.py) in addition to the pytest exit code.
       - name: Run eval gate
-        env:
-          AEG_API_KEY: ${{ secrets.AEG_API_KEY }}
-        run: .venv/bin/python -m pytest tests/eval/
+        run: .venv/bin/python -m pytest tests/eval/ -q
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gate-report
+          path: gate-report/
+          if-no-files-found: ignore

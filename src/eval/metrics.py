@@ -7,6 +7,7 @@ from ragas.llms.base import llm_factory
 from ragas.metrics.collections import ContextPrecisionWithoutReference, Faithfulness
 
 from src.config import get_settings
+from src.rag.usage import metered_async_http_client
 
 # Determinism controls, not environment-specific config: these must be identical in every
 # environment (local/CI/prod), which is the opposite of what belongs in Settings - see
@@ -33,7 +34,9 @@ def score_example(query: str, retrieved_context: list[str], answer: str) -> Exam
     settings = get_settings()
     judge_llm = llm_factory(
         settings.judge_model,
-        client=AsyncOpenAI(api_key=settings.api_key.get_secret_value()),
+        # Metered like every other OpenAI client (src/rag/usage.py), so judge tokens count
+        # toward a run's cost - they're the bulk of it.
+        client=AsyncOpenAI(api_key=settings.api_key.get_secret_value(), http_client=metered_async_http_client()),
         temperature=_JUDGE_TEMPERATURE,
         seed=_JUDGE_SEED,
     )

@@ -2,10 +2,12 @@ import json
 
 import pytest
 
+from src.eval.gate_report import GateReport, GateRow
 from src.eval.results_store import (
     RunResult,
     append_run_result,
     load_all_run_results,
+    load_gate_reports,
     load_judge_variance_summary,
     load_reranker_benchmark_summary,
 )
@@ -122,3 +124,16 @@ def test_reranker_benchmark_not_picked_up_by_load_all_run_results(tmp_path):
     loaded = load_all_run_results(results_dir=tmp_path)
 
     assert [r.run_id for r in loaded] == ["run-001"]
+
+
+def test_gate_reports_load_keyed_by_run_id_and_tolerate_a_missing_dir(tmp_path):
+    assert load_gate_reports(tmp_path / "does-not-exist") == {}
+
+    report = GateReport()
+    report.record(GateRow(example_id="adversarial-001", category="adversarial", check="declines", passed=False))
+    (tmp_path / "gate-1.json").write_text(report.to_json("gate-1"))
+
+    loaded = load_gate_reports(tmp_path)
+    assert list(loaded) == ["gate-1"]
+    assert loaded["gate-1"]["rows"][0]["example_id"] == "adversarial-001"
+    assert loaded["gate-1"]["headline"].startswith("BLOCKED")

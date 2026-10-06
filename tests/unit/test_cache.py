@@ -69,3 +69,18 @@ def test_cached_embedder_logs_hit_and_miss(tmp_path, caplog):
     messages = [r.message for r in caplog.records]
     assert any("CACHE MISS" in m and "logged text" in m for m in messages)
     assert any("CACHE HIT" in m and "logged text" in m for m in messages)
+
+
+class OtherEmbedder(CountingEmbedder):
+    """A different embedder implementation, same output shape as CountingEmbedder."""
+
+
+def test_cached_embedder_isolates_by_embedder_implementation_under_the_same_model_name(tmp_path):
+    # Regression: a placeholder embedder cached under a real model's name must never be
+    # served to the real embedder (the HashingEmbedder/"text-embedding-3-small" collision).
+    cache_path = tmp_path / "embeddings.json"
+    placeholder, real = CountingEmbedder(), OtherEmbedder()
+    CachedEmbedder(placeholder, model_name="text-embedding-3-small", cache_path=cache_path).embed("same text")
+    CachedEmbedder(real, model_name="text-embedding-3-small", cache_path=cache_path).embed("same text")
+
+    assert placeholder.call_count == 1 and real.call_count == 1

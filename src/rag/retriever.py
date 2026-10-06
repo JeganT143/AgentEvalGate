@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 
@@ -15,6 +16,15 @@ class Document:
 class RetrievalResult:
     document: Document
     score: float
+
+
+class Retriever(Protocol):
+    """The retrieval seam RAGPipeline depends on - the same shape as Embedder/Generator/
+    Reranker. Implement this over a real vector store (pgvector, Pinecone, ...) to point
+    the pipeline, the eval gate and the dashboard at your own corpus.
+    """
+
+    def retrieve(self, query_embedding: np.ndarray, top_k: int = 3) -> list[RetrievalResult]: ...
 
 
 class InMemoryRetriever:

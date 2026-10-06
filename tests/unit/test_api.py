@@ -50,3 +50,19 @@ def test_cors_blocks_an_unlisted_origin_and_allows_the_configured_dashboard_orig
         headers={"Origin": "http://localhost:8501", "Access-Control-Request-Method": "POST"},
     )
     assert allowed.headers.get("access-control-allow-origin") == "http://localhost:8501"
+
+
+def test_health_is_free_and_never_rate_limited():
+    client = TestClient(app)
+    statuses = [client.get("/health").status_code for _ in range(15)]
+    assert statuses == [200] * 15
+    assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_query_rejects_an_empty_query_before_any_llm_call():
+    app.dependency_overrides[get_pipeline] = _stub_pipeline
+    try:
+        response = TestClient(app).post("/query", json={"query": ""})
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 422

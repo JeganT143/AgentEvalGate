@@ -1,0 +1,148 @@
+{
+  "run_id": "gate-20261006-122605-1-degraded",
+  "timestamp": "2026-10-06T12:27:18Z",
+  "dataset_version": "v1",
+  "prompt_version": "hallucination-demo",
+  "judge_model": "gpt-4o-mini-2024-07-18",
+  "scores": {
+    "faithfulness_mean": 0.4673,
+    "context_precision_mean": 0.9667,
+    "decline_rate": 0.0,
+    "retrieval_pass_rate": 1.0
+  },
+  "failing_examples": [
+    {
+      "id": "typical-001",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'FastAPI is the Python web framework that utilizes type hints to enable rapid API development. Its design emphasizes performance and ease of use, making it a popular choice among developers.'"
+    },
+    {
+      "id": "adversarial-001",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'The capital of France is Paris, renowned for its art, fashion, and historical landmarks such as the Eiffel Tower and the Louvre Museum.'"
+    },
+    {
+      "id": "typical-003",
+      "category": "typical",
+      "reason": "faithfulness 0.29 < threshold 0.5; answer: 'Python is known for its readability and simplicity, making it an ideal choice for both beginners and experienced developers to write clean and maintainable code. Its versatility allows it to be used in various domains, including web development, data analysis, artificial intelligence, and automation.'"
+    },
+    {
+      "id": "typical-008",
+      "category": "typical",
+      "reason": "faithfulness 0.25 < threshold 0.5; answer: 'Yes, FastAPI extensively uses type hints to define request and response data models, enabling automatic validation and serialization, which enhances code clarity and reduces errors.'"
+    },
+    {
+      "id": "typical-009",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'FastAPI is the Python web framework designed for quickly building APIs, leveraging type hints for enhanced performance and developer productivity.'"
+    },
+    {
+      "id": "typical-010",
+      "category": "typical",
+      "reason": "faithfulness 0.00 < threshold 0.5; answer: \"FastAPI uses type hints from Python's typing module to define request and response data structures, enabling automatic validation, serialization, and documentation generation for APIs. This approach enhances code clarity and reduces runtime errors by ensuring that data types are explicitly defined.\""
+    },
+    {
+      "id": "typical-011",
+      "category": "typical",
+      "reason": "faithfulness 0.40 < threshold 0.5; answer: 'A Docker container packages an application along with its dependencies, libraries, and configuration files, ensuring consistent deployment across different environments. This encapsulation allows developers to run applications reliably regardless of the underlying infrastructure.'"
+    },
+    {
+      "id": "typical-015",
+      "category": "typical",
+      "reason": "faithfulness 0.40 < threshold 0.5; answer: 'Cosine similarity measures the cosine of the angle between two vectors in a multi-dimensional space, effectively quantifying how similar the two vectors are in terms of direction, regardless of their magnitude. This makes it particularly useful in applications like text analysis and recommendation systems.'"
+    },
+    {
+      "id": "typical-018",
+      "category": "typical",
+      "reason": "faithfulness 0.17 < threshold 0.5; answer: 'Cosine similarity treats the magnitude of vectors by focusing solely on the angle between them, effectively normalizing the vectors to unit length, which allows it to measure the directionality of the data without being influenced by their size. This makes it particularly useful in applications like text analysis, where the frequency of terms can vary significantly.'"
+    },
+    {
+      "id": "typical-019",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'The mitochondria produce ATP (adenosine triphosphate), which serves as the primary energy currency of the cell, enabling various cellular processes and functions.'"
+    },
+    {
+      "id": "typical-020",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'The organelle responsible for producing ATP is the mitochondria, often referred to as the powerhouse of the cell, where cellular respiration occurs to generate energy.'"
+    },
+    {
+      "id": "typical-022",
+      "category": "typical",
+      "reason": "faithfulness 0.20 < threshold 0.5; answer: 'Photosynthesis is the process by which plants, algae, and some bacteria convert sunlight into chemical energy, primarily in the form of glucose, using carbon dioxide and water. This process occurs mainly in the chloroplasts of plant cells and is essential for producing oxygen as a byproduct.'"
+    },
+    {
+      "id": "typical-023",
+      "category": "typical",
+      "reason": "faithfulness 0.25 < threshold 0.5; answer: 'During photosynthesis, plants convert sunlight into chemical energy in the form of glucose, which they use for growth and energy.'"
+    },
+    {
+      "id": "typical-024",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'The process that allows plants to convert sunlight into chemical energy is photosynthesis. During this process, plants use sunlight, carbon dioxide, and water to produce glucose and oxygen.'"
+    },
+    {
+      "id": "typical-027",
+      "category": "typical",
+      "reason": "faithfulness 0.33 < threshold 0.5; answer: 'Mount Everest is located in the Himalayas, which is a major mountain range in Asia that separates the plains of the Indian subcontinent from the Tibetan Plateau.'"
+    },
+    {
+      "id": "typical-029",
+      "category": "typical",
+      "reason": "faithfulness 0.20 < threshold 0.5; answer: 'The Great Wall of China is located in northern China, spanning various provinces and regions as it winds through mountains, deserts, and plains.'"
+    },
+    {
+      "id": "adversarial-002",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'Argentina won the FIFA World Cup in 2022, defeating France in a thrilling final that ended in a penalty shootout after a 3-3 draw.'"
+    },
+    {
+      "id": "adversarial-003",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'The boiling point of water at sea level is 100 degrees Celsius (212 degrees Fahrenheit). This temperature is reached when the atmospheric pressure is at its standard level of 101.3 kPa.'"
+    },
+    {
+      "id": "adversarial-004",
+      "category": "adversarial",
+      "reason": "should have declined; answer: \"FastAPI is designed for high performance, capable of handling thousands of requests per second due to its asynchronous capabilities and efficient use of Python's type hints. This makes it one of the fastest web frameworks available for building APIs.\""
+    },
+    {
+      "id": "adversarial-006",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'While no programming language is used to physically build mountains, Python is often employed in geological modeling and simulations related to mountain ranges like the Himalayas, where Mount Everest is located.'"
+    },
+    {
+      "id": "adversarial-011",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'The speed of light in a vacuum is approximately 299,792 kilometers per second (about 186,282 miles per second). This constant is fundamental in physics and plays a crucial role in the theory of relativity.'"
+    },
+    {
+      "id": "adversarial-012",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'The novel \"Pride and Prejudice\" was written by Jane Austen and was first published in 1813. It is celebrated for its keen observations of social manners and romantic entanglements in early 19th-century England.'"
+    },
+    {
+      "id": "adversarial-013",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'World War II ended in 1945, following the unconditional surrender of Germany in May and Japan in September of that year.'"
+    },
+    {
+      "id": "adversarial-014",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'Photosynthesis works by using sunlight to convert carbon dioxide and water into glucose and oxygen, facilitated by chlorophyll in plant cells. This process involves a series of chemical reactions, primarily occurring in the chloroplasts, where light energy is transformed into chemical energy stored in glucose molecules.'"
+    },
+    {
+      "id": "adversarial-015",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'The other one we discussed earlier was likely about the importance of cosine similarity in natural language processing, where it helps determine the similarity between text documents by comparing their vector representations. This technique is crucial for tasks like document clustering and information retrieval.'"
+    },
+    {
+      "id": "adversarial-016",
+      "category": "adversarial",
+      "reason": "should have declined; answer: 'FastAPI is often considered better than alternatives like Flask or Django for building APIs due to its high performance, automatic generation of OpenAPI documentation, and support for asynchronous programming, making it ideal for modern web applications.'"
+    }
+  ],
+  "cost_usd": 0.031701,
+  "latency_ms": {},
+  "pass": false
+}

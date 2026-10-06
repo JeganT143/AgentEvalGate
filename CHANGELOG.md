@@ -8,6 +8,88 @@ This project hasn't cut a tagged/versioned release yet (`pyproject.toml` is stil
 semantic-version sections will replace this once something actually ships. Dates
 below are the real commit dates (`git log --date=short`), not estimates.
 
+## Unreleased — 2026-10-06
+
+### Added
+- **Real embeddings** (`src/rag/embedders.py::OpenAIEmbedder`, `text-embedding-3-small`,
+  behind `CachedEmbedder`) are now the default. `AEG_EMBEDDER=hashing` keeps the free
+  offline placeholder. Measured: hit@3 and recall@3 = 1.00 for every typical and multi-hop
+  question (the offline embedder retrieved every required document for only 7/10
+  multi-hop questions).
+- **Multi-hop search gate** (`tests/eval/test_multi_hop.py`) — every document a multi-hop
+  question needs must be in the top 3. Retrieval-only, no judge. Measured before gating:
+  10/10, each by a +0.22 to +0.47 cosine margin. Multi-hop *answers* stay tracked rather than
+  gated: the grounded prompt declines 6/10 of them, and a prompt that allowed combining
+  passages was measured and not adopted (see `src/eval/policy.py`). The gate is now 51 checks.
+- **Cost metering** (`src/rag/usage.py`) — an httpx response hook on every OpenAI client
+  (generator, reranker, embedder, the RAGAS judge) records real token usage, attributed
+  per caller with a ContextVar. Cost appears per question and per run in the gate report,
+  on `RunResult.cost_usd`, in the dashboard's history table, and on every live run.
+  Measured: a full gate run costs about $0.03.
+- **Break-the-prompt switch** in "Try it live" — visitors can run any question with the
+  hallucination-demo prompt and watch the gate block it.
+- `assets/demo.gif`, recorded from the real dashboard by `scripts/record_demo_gif.py`.
+- `python -m src.eval.benchmark_reranker` — a reproducible, metered reranker benchmark
+  that replaces the hand-transcribed Day 5 numbers. With real embeddings it measures
+  +0.000 precision@3 for +1.4 s per question. The original offline-embedder measurement
+  (+0.020) is kept as `results/reranker_benchmark/2026-07-27-offline-embedder.json`.
+- `RAGPipeline.retrieve()` — search (+ rerank) without generation.
+- **Decline gate** (`tests/eval/test_adversarial.py`, `src/eval/refusal.py`) — the
+  11 out-of-corpus `adversarial` questions must be answered with a decline. Pattern-
+  based, no judge call. Measured before gating: 11/11 declined on the current prompt,
+  0/11 on the hallucination-demo prompt.
+- **Per-question gate report** (`src/eval/gate_report.py`, `tests/eval/conftest.py`) —
+  written to the GitHub Actions job summary, a `gate-report` artifact, and the terminal.
+  Errors (bad key, network) are reported as configuration problems, separately from
+  quality failures.
+- **Full-gate demo runs** — `python -m src.eval.generate_demo_runs --full-gate` runs
+  every gated check for both prompts in parallel and records each as a `RunResult` plus a
+  per-question report (`results/gate_reports/`). Recorded: current prompt 51/51 passed,
+  broken prompt blocked with 26/51 failing.
+- `hit_at_k` / `recall_at_k` retrieval metrics — `precision@3` caps at 0.33 for a
+  single-relevant-document question, which read as a failure on perfect retrieval.
+- `Retriever` protocol, `src/rag/factory.py::build_demo_pipeline()` (replaces five
+  copy-pasted pipeline constructions), `src/rag/prompts.py` and an injectable
+  `prompt_builder` (replaces monkey-patching `RAGPipeline._build_prompt`),
+  `src/eval/policy.py` (the threshold, shared by the gate and the dashboard).
+- `PipelineResult.prompt` and `PipelineResult.timings_ms`.
+- API: `GET /health`; `/query` rejects empty queries and caps them at 1,000 characters;
+  responses include each retrieved chunk's `id`.
+- CI: a free `unit-tests` job that runs first on every PR (unit tests previously never
+  ran in CI); a preflight that fails in seconds with a named reason when `AEG_API_KEY`
+  is missing, rejected (401) or out of quota (429); Python pinned to 3.13;
+  superseded runs cancelled.
+
+### Changed
+- **Dashboard redesigned for first-time visitors.** Plain-language headline and a
+  4-step "how it works" strip. A new Overview tab leads with the red → green story as
+  run cards. "Try it live" is guided: questions grouped by type, the 8-document
+  knowledge base shown, the answer displayed in ~2 s while the judge grades, a
+  pass/block verdict using the gate's own policy, plain-English score tiles, and the
+  exact prompt. Gate history now explains the judge-reliability numbers. The Reranker
+  tab leads with a one-sentence answer and a before/after dumbbell chart. "CI Demo"
+  (a "coming soon" placeholder) is replaced by "Use it in your repo" with a real gate
+  report. A glossary is added, and the mobile layout and table overflow are fixed.
+- Dashboard first paint no longer waits on RAGAS/DeepEval imports (lazy-loaded on Run):
+  cold first load 2.6 s → 1.3 s locally.
+- `measure_variance.py` now covers all 58 golden examples (it silently skipped
+  `adversarial.jsonl`).
+- README rewritten top-down for newcomers: live demo link, the measured regression
+  table, what the gate checks, deployment facts (the live demo runs on Cloud Run).
+
+### Fixed
+- `CachedEmbedder` keyed entries by model name only, and the eval gate wrapped the
+  offline `HashingEmbedder` under the name `text-embedding-3-small`. That filed 256-dim
+  hashing vectors under the real model's name, and they were served to the real embedder
+  (a shape mismatch at retrieval time). The key now includes the embedder implementation.
+  `CachedEmbedder` is also thread-safe now.
+- The deployed dashboard showed Streamlit's default red accent: `Dockerfile.dashboard`
+  never copied `.streamlit/config.toml`.
+- The live demo inserted the LLM's answer into the page as raw HTML (an injection sink).
+  All model output and data are now escaped.
+- A failed live call no longer shows the raw exception text (which can include a masked
+  key) to the public.
+
 ## Day 9 — 2026-07-27
 
 ### Changed

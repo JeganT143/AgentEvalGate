@@ -1,21 +1,115 @@
 {
-  "measured_at": "2026-07-27",
-  "source": "Day 5 / Step 3: wired-pipeline before/after measurement, reranker OFF vs ON, real gpt-4o-mini reranker calls, StubGenerator for generation (metrics here are fully determined by retrieve+rerank, independent of the generator - see internal/mentoring_notes.md, Day 5 / Step 3). Covers the 50 v0+v1 examples that existed at measurement time - predates the 8 extra adversarial.jsonl examples added later the same day (Day 5 / Step 4), so it does not cover all 58 golden examples the dashboard's Try It Live tab offers.",
+  "measured_at": "2026-10-06",
+  "source": "python -m src.eval.benchmark_reranker: all 58 golden examples, reranker OFF vs ON, embedder=openai (text-embedding-3-small), real gpt-4o-mini reranker calls, StubGenerator for generation (retrieval metrics are fully determined by retrieve + rerank). Cost metered from OpenAI's usage data (src/rag/usage.py).",
+  "embedder": "openai",
   "precision_at_k": {
     "k": 3,
     "by_category": [
-      {"category": "typical", "n": 30, "off": 0.3333, "on": 0.3333, "delta": 0.0},
-      {"category": "multi_hop", "n": 10, "off": 0.6000, "on": 0.6333, "delta": 0.0333},
-      {"category": "adversarial", "n": 10, "off": 0.2333, "on": 0.3000, "delta": 0.0667}
+      {
+        "category": "typical",
+        "n": 30,
+        "off": 0.3333,
+        "on": 0.3333,
+        "delta": 0.0
+      },
+      {
+        "category": "multi_hop",
+        "n": 10,
+        "off": 0.7,
+        "on": 0.7,
+        "delta": 0.0
+      },
+      {
+        "category": "adversarial",
+        "n": 18,
+        "off": 0.2407,
+        "on": 0.2407,
+        "delta": 0.0
+      }
     ],
-    "all": {"n": 50, "off": 0.3667, "on": 0.3867, "delta": 0.0200}
+    "all": {
+      "n": 58,
+      "off": 0.3678,
+      "on": 0.3678,
+      "delta": 0.0
+    }
   },
-  "latency_ms_added": {"mean": 1193.5, "median": 1144.5, "p95": 1893.8, "min": 615.4, "max": 3108.4},
+  "hit_at_k": {
+    "k": 3,
+    "by_category": [
+      {
+        "category": "typical",
+        "n": 30,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      },
+      {
+        "category": "multi_hop",
+        "n": 10,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      },
+      {
+        "category": "adversarial",
+        "n": 7,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      }
+    ],
+    "all": {
+      "n": 47,
+      "off": 1.0,
+      "on": 1.0,
+      "delta": 0.0
+    }
+  },
+  "recall_at_k": {
+    "k": 3,
+    "by_category": [
+      {
+        "category": "typical",
+        "n": 30,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      },
+      {
+        "category": "multi_hop",
+        "n": 10,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      },
+      {
+        "category": "adversarial",
+        "n": 7,
+        "off": 1.0,
+        "on": 1.0,
+        "delta": 0.0
+      }
+    ],
+    "all": {
+      "n": 47,
+      "off": 1.0,
+      "on": 1.0,
+      "delta": 0.0
+    }
+  },
+  "latency_ms_added": {
+    "mean": 1382.5,
+    "median": 1223.9,
+    "p95": 2148.4,
+    "min": 700.8,
+    "max": 5631.4
+  },
   "cost_added": {
-    "n_calls": 50,
-    "prompt_tokens": 8518,
-    "completion_tokens": 1373,
-    "total_usd": 0.0021,
-    "mean_usd_per_query": 0.000042
+    "n_calls": 58,
+    "prompt_tokens": 9807,
+    "completion_tokens": 1508,
+    "total_usd": 0.002376,
+    "mean_usd_per_query": 4.1e-05
   }
 }
