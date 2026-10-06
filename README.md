@@ -220,7 +220,7 @@ Full contributor setup, including running the dashboard locally and adding a gol
 - the pipeline with real OpenAI embeddings, and the golden dataset (58 questions)
 - the CI gate: 51 checks (grounded, declines, multi-hop search), with a passing full run recorded
 - retrieval `hit@k`, `recall@k` and `precision@k`
-- real per-question and per-run cost metering
+- real per - question and per-run cost metering
 - the reranker (re-measured, reproducible)
 - the per-question gate report
 - CORS, rate limiting and `/health` on the API
