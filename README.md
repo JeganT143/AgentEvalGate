@@ -1,6 +1,6 @@
 # AgentEvalGate
 
-**Catch AI answer-quality regressions before they're merged.**
+**Catch AI answer quality regressions before they're merged.**
 
 [![Eval Gate](https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml/badge.svg)](https://github.com/JeganT143/AgentEvalGate/actions/workflows/eval-gate.yml)
 
